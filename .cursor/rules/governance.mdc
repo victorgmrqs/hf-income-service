@@ -1,0 +1,70 @@
+---
+description: Business rules governance and Definition of Done for hf-income-service
+globs: ["internal/usecase/**/*.go", "internal/entity/**/*.go", "internal/handler/**/*.go"]
+alwaysApply: true
+---
+
+# Home Finance — Governança de Regras de Negócio (hf-income-service)
+
+## Fonte de Verdade
+
+- **Notion (regras de negócio):** https://www.notion.so/30ee65ad4ba98086809ed3a3f38ef45f
+- **Espelho local:** `RULES.md` — em caso de divergência, o Notion prevalece
+- **OpenAPI:** `openapi.yaml` — contratos de API
+
+## Convenção de Referência de Regras
+
+Toda validação ou variável de erro que implementa uma regra de negócio deve referenciar o ID no comentário:
+
+```go
+// REC-03
+var ErrCannotEditPastIncome = errors.New("income edits apply from current competence forward only")
+
+// ORC-03
+func autoAdjust(prevSpending, prevCeiling decimal.Decimal) decimal.Decimal {
+    if prevSpending.LessThan(prevCeiling) {
+        return prevSpending
+    }
+    return prevCeiling
+}
+```
+
+## Definition of Done (DoD)
+
+Toda alteração que adiciona ou modifica uma regra de negócio DEVE:
+
+1. **Referenciar o ID da regra** no comentário do código (ex: `// REC-03`)
+2. **Atualizar `RULES.md`** com o status correto (✅ / 🚧 / 📅)
+3. **Atualizar o Notion** na página do domínio correspondente
+4. **Referenciar o ID no PR** sob "Regras Afetadas"
+
+Se a regra ainda não existe no Notion, documente-a **antes** de implementar.
+
+## Regras Críticas (memorizar)
+
+- **REC-03:** Edição de receita recorrente aplica APENAS a partir do mês vigente. Nunca alterar competências passadas.
+- **ORC-03:** Auto-ajuste do teto global só REDUZ (gasto < teto → teto = gasto). Nunca aumenta automaticamente.
+- **SAL-02:** Despesas comprometidas = contas a pagar PENDING com due_date no mês atual.
+- **MET-05:** `variation_pct = (current - previous) / previous * 100`. Negativo = redução (positivo = aumento).
+
+## Arquitetura (resumo)
+
+```
+Handler → UseCase interface → Repository interface → GORM/PostgreSQL
+Handler → UseCase interface → HTTPClient interface → hf-transaction-service
+```
+
+- Handlers: APENAS parsing HTTP + chamada ao use case
+- Use cases: TODA a lógica de negócio
+- Valores monetários: `decimal.Decimal` (NUNCA `float64`)
+- Competência: sempre `YYYY-MM` (validar com regex `^\d{4}-\d{2}$`)
+
+## Padrões de Resposta
+
+```json
+// Sucesso
+{ "data": <payload>, "error": null }
+
+// Erro
+{ "data": null, "error": { "code": "RULE_VIOLATION", "message": "..." } }
+```
