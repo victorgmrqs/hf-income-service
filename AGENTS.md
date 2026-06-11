@@ -1,4 +1,7 @@
-# CLAUDE.md
+# AGENTS.md
+
+> Arquivo de instruções cross-tool (Claude Code, Antigravity CLI/agy, Cursor).
+> Instruções específicas por ferramenta: `CLAUDE.md` (Claude) | `GEMINI.md` (agy).
 
 ## Project Overview
 
@@ -68,10 +71,10 @@ Balance (SAL) is a computed response — no persistence. It aggregates income fr
 
 ## Business Rules — Source of Truth
 
-**The Notion workspace is the single source of truth for all business rules.**
+**Confluence is the single source of truth for all business rules.**
 
-- **Notion (business rules):** https://www.notion.so/30ee65ad4ba98086809ed3a3f38ef45f
-- **Local mirror:** `docs/rules/` — one file per domain. In case of divergence, Notion prevails.
+- **Confluence:** https://goncalvesmarques.atlassian.net/wiki (Home Finance space)
+- **Local mirror:** `docs/rules/` — one file per domain. In case of divergence, Confluence prevails.
 
 | Domain | File | Description |
 |--------|------|-------------|
@@ -83,7 +86,7 @@ Balance (SAL) is a computed response — no persistence. It aggregates income fr
 Every error variable or validation that enforces a business rule must reference its rule ID in a comment:
 ```go
 // REC-03
-var ErrCannotEditPastIncome = errors.New("income edits apply from current competence forward only")
+var ErrCannotEditPropagatedIncome = errors.New("propagated income cannot be edited")
 ```
 
 ## Observability Conventions
@@ -134,7 +137,7 @@ Every code change that adds or modifies a business rule MUST:
    var ErrCeilingAutoAdjusted = errors.New("ceiling auto-adjusted from previous month spending")
    ```
 2. **Update `docs/rules/<DOMAIN>.md`** — add or update the rule row with correct status
-3. **Update Notion** — add or update the rule in the corresponding domain page
+3. **Update Confluence** — add or update the rule in the corresponding domain page
 4. **Reference the rule ID in the PR description** under "Regras Afetadas"
 
-If a rule does not yet exist in Notion, document it there **before** implementing it in code.
+If a rule does not yet exist in Confluence, document it there **before** implementing it in code.
