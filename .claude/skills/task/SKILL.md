@@ -13,7 +13,7 @@ description: >
 
 ## Objetivo
 
-Executar o ciclo completo de desenvolvimento de um ticket Jira com dois checkpoints humanos e um gate de code review. Documentação e testes fazem parte da entrega — não são etapas posteriores. Processo canônico: [docs/workflow.md](docs/workflow.md).
+Executar o ciclo completo de desenvolvimento de um ticket Jira com dois checkpoints humanos e um gate de code review. Documentação e testes fazem parte da entrega — não são etapas posteriores. Processo canônico: [docs/workflow.md](../../../docs/workflow.md).
 
 Projeto Jira: `HF` — https://goncalvesmarques.atlassian.net.
 Colunas: `Backlog → In Progress (Fase 3.0) → In Review (Fase 8) → Done (manual, no merge)`.
@@ -108,7 +108,7 @@ Regras obrigatórias (ver CLAUDE.md):
 ## Fase 4 — Testes
 
 - **Use cases:** unitários com mock das interfaces de repositório. **Repositórios:** integração com `testcontainers-go` (PostgreSQL real). **HTTP client:** mock via interface nos unit tests.
-- Padrões de setup: [.claude/skills/testing-guide.md](.claude/skills/testing-guide.md) (ou `.claude/skills/testing-guide/`).
+- Padrões de setup: [.claude/skills/testing-guide.md](../testing-guide.md) (ou `.claude/skills/testing-guide/`).
 - Cenários obrigatórios por use case (nomes exatos):
   - `Test<UseCase>_Success`
   - `Test<UseCase>_MissingRequiredField` (quando aplicável)

@@ -37,3 +37,6 @@ Thumbs.db
 # Build output
 dist/
 bin/
+
+# /task workflow brief (não versionado)
+task-brief.yaml
