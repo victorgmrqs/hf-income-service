@@ -1,0 +1,23 @@
+# golangci-lint — hf-income-service
+# Estratégia: lint só de código novo/alterado no PR (only-new-issues no CI),
+# para não bloquear por dívida legada. Limpeza de legado é incremental.
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  enable:
+    - errcheck      # erros não verificados
+    - govet         # análise estática do compilador
+    - ineffassign   # atribuições sem efeito
+    - staticcheck   # bugs e simplificações
+    - unused        # código morto
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  exclude-rules:
+    # Asserções e helpers de teste podem ignorar retornos de erro.
+    - path: _test\.go
+      linters:
+        - errcheck

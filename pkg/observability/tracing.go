@@ -16,12 +16,14 @@ import (
 // NewTracerProvider configures OpenTelemetry with OTLP HTTP exporter (Grafana Cloud / Jaeger).
 //
 // Required env vars:
-//   OTEL_EXPORTER_OTLP_ENDPOINT  — e.g. https://otlp-gateway-prod-us-east-0.grafana.net/otlp
-//   OTEL_EXPORTER_OTLP_HEADERS   — e.g. Authorization=Basic <base64(instanceId:token)>
+//
+//	OTEL_EXPORTER_OTLP_ENDPOINT  — e.g. https://otlp-gateway-prod-us-east-0.grafana.net/otlp
+//	OTEL_EXPORTER_OTLP_HEADERS   — e.g. Authorization=Basic <base64(instanceId:token)>
 //
 // Optional env vars:
-//   OTEL_SERVICE_NAME    — defaults to "hf-income-service"
-//   OTEL_SAMPLING_RATIO  — float 0.0–1.0, defaults to 1.0 (100%)
+//
+//	OTEL_SERVICE_NAME    — defaults to "hf-income-service"
+//	OTEL_SAMPLING_RATIO  — float 0.0–1.0, defaults to 1.0 (100%)
 //
 // Returns the provider and a shutdown function to flush pending spans on exit.
 func NewTracerProvider(ctx context.Context) (*sdktrace.TracerProvider, func(), error) {

@@ -25,9 +25,53 @@ jobs:
       - name: Run tests
         run: go test ./...
 
+  quality:
+    name: Quality (format + vet + lint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # golangci-lint only-new-issues precisa do histórico
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: gofmt
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "Arquivos não formatados (rode: gofmt -w .):"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: golangci-lint (só código novo do PR)
+        if: github.event_name == 'pull_request'
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          only-new-issues: true
+
+  docs-guard:
+    name: Docs Guard
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # docs-guard precisa do histórico para o diff contra o base
+
+      - name: docs-guard
+        run: bash scripts/docs-guard.sh origin/${{ github.base_ref }}
+
   build-and-push:
     name: Build & Push Image
-    needs: [test]
+    needs: [test, quality]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     outputs:
