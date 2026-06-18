@@ -10,6 +10,7 @@ Cada entrada referencia o ticket Jira (`(HF-XX)`). Datas em `YYYY-MM-DD`.
 - Gates de qualidade no CI: job `quality` (gofmt + go vet + golangci-lint só código novo do PR) e job `docs-guard` (em pull_request); `build-and-push` passa a depender de `quality`. (HF-91)
 - `.golangci.yml` (errcheck, govet, ineffassign, staticcheck, unused) e `scripts/docs-guard.sh` (código em `internal/` sem CHANGELOG/teste no mesmo diff falha o PR). (HF-91)
 - Skills do workflow versionadas: `/task`, `/code-review-task`, `/docs-sync` em `.claude/skills/<nome>/SKILL.md` (Claude Code) e `.agents/skills/<nome>.md` (agy); `task.md` plano antigo removido. (HF-96)
+- Pacotes de suporte: `src/config` (`Load()` via Viper), `src/pkg/database` (`Connect()` GORM/PostgreSQL) e `src/pkg/response` (`Success()`/`Error()` com envelope `{data,error}`). (HF-56)
 
 ### Changed
 - Reestruturação de pastas: `internal/`, `config/`, `pkg/`, `cmd/` movidos para `src/`; `go.mod`/`go.sum` permanecem na raiz; sem mudança de regra de negócio. (HF-97)
@@ -19,3 +20,4 @@ Cada entrada referencia o ticket Jira (`(HF-XX)`). Datas em `YYYY-MM-DD`.
 
 ### Dependencies
 - `go mod tidy`: requires indiretos sincronizados no `go.mod` (entradas faltantes de `gin` e transitivos). (HF-91)
+- Adicionados `github.com/spf13/viper`, `gorm.io/gorm`, `gorm.io/driver/postgres`. (HF-56)

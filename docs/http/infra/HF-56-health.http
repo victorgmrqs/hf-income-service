@@ -1,0 +1,15 @@
+### HF-56 — T01: Pacotes de suporte (config, database, response)
+# Esta task entrega apenas os pacotes de fundação (config/database/response).
+# Ainda NÃO há endpoints HTTP — o servidor Gin e o health check chegam no T04 (HF-58).
+#
+# Quando o servidor existir, este arquivo valida o envelope padronizado abaixo.
+
+### Health check (disponível a partir do T04 — HF-58)
+# GET http://localhost:8081/health
+# Accept: application/json
+#
+# Esperado (envelope de sucesso definido neste T01):
+#   200 { "data": { "status": "ok" }, "error": null }
+
+### Exemplo de envelope de erro (formato definido neste T01)
+#   400 { "data": null, "error": { "code": "REC-02", "message": "valor inválido" } }
