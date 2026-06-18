@@ -10,41 +10,41 @@ Home Finance Income Service — Go REST API responsible for income tracking, mon
 
 ```bash
 # Build
-go build ./cmd/server
+go build ./src/cmd/server
 
 # Run all tests
 go test ./...
 
 # Run tests for a specific package
-go test ./internal/usecase/income/
+go test ./src/internal/usecase/income/
 
 # Run a single test by name
-go test -run TestIncomeUseCase_Create ./internal/usecase/income/
+go test -run TestIncomeUseCase_Create ./src/internal/usecase/income/
 
 # Run tests with coverage
 go test -cover ./...
 
 # Run the application (requires PostgreSQL and .env)
-go run ./cmd/server
+go run ./src/cmd/server
 ```
 
 ## Architecture
 
 Clean architecture with four layers following the dependency rule `Handler → UseCase → Repository (interface) → DB`:
 
-- **entity** (`internal/entity/`) — Domain models with GORM tags. UUID v4 primary keys generated in `BeforeCreate` hooks. Soft deletes via `gorm.DeletedAt`.
-- **repository** (`internal/repository/`) — Data access. Interfaces defined in `interfaces.go`, implementations in per-entity files. Uses GORM.
-- **usecase** (`internal/usecase/<domain>/`) — Business logic. One operation per file (`create.go`, `get.go`, `update.go`, `delete.go`). Each defines its own interface, input/output types, and `Execute()` method.
-- **handler** (`internal/handler/<domain>/`) — Gin HTTP handlers. Receives usecase interfaces via constructor injection.
+- **entity** (`src/internal/entity/`) — Domain models with GORM tags. UUID v4 primary keys generated in `BeforeCreate` hooks. Soft deletes via `gorm.DeletedAt`.
+- **repository** (`src/internal/repository/`) — Data access. Interfaces defined in `interfaces.go`, implementations in per-entity files. Uses GORM.
+- **usecase** (`src/internal/usecase/<domain>/`) — Business logic. One operation per file (`create.go`, `get.go`, `update.go`, `delete.go`). Each defines its own interface, input/output types, and `Execute()` method.
+- **handler** (`src/internal/handler/<domain>/`) — Gin HTTP handlers. Receives usecase interfaces via constructor injection.
 
 Supporting packages:
-- `pkg/response/` — Standardized JSON responses: `response.Success(c, status, data)` and `response.Error(c, status, code, message)`
-- `pkg/database/` — PostgreSQL connection via GORM
-- `pkg/httpclient/` — HTTP client for calls to `hf-transaction-service`
-- `pkg/observability/` — Logger (slog), Prometheus metrics, OTEL tracer, request middleware
-- `config/` — Viper-based config loading from `.env`
+- `src/pkg/response/` — Standardized JSON responses: `response.Success(c, status, data)` and `response.Error(c, status, code, message)`
+- `src/pkg/database/` — PostgreSQL connection via GORM
+- `src/pkg/httpclient/` — HTTP client for calls to `hf-transaction-service`
+- `src/pkg/observability/` — Logger (slog), Prometheus metrics, OTEL tracer, request middleware
+- `src/config/` — Viper-based config loading from `.env`
 
-Routing is set up in `internal/handler/routes.go` under `/api/v1/` with RESTful resource groups.
+Routing is set up in `src/internal/handler/routes.go` under `/api/v1/` with RESTful resource groups.
 
 ## Domain Entities
 
@@ -88,7 +88,7 @@ var ErrCannotEditPastIncome = errors.New("income edits apply from current compet
 
 ## Observability Conventions
 
-Instrumentation lives in `pkg/observability/`. Full reference: [`docs/observability.md`](docs/observability.md).
+Instrumentation lives in `src/pkg/observability/`. Full reference: [`docs/observability.md`](docs/observability.md).
 
 **Rules enforced in every code change:**
 

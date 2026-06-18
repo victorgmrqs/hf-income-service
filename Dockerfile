@@ -14,7 +14,7 @@ RUN go mod download
 COPY . .
 
 # Build do binário estático (CGO desabilitado para Alpine)
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /app/server ./cmd/server
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /app/server ./src/cmd/server
 
 # ================================
 # Stage 2: Runtime

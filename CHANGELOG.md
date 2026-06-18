@@ -11,6 +11,9 @@ Cada entrada referencia o ticket Jira (`(HF-XX)`). Datas em `YYYY-MM-DD`.
 - `.golangci.yml` (errcheck, govet, ineffassign, staticcheck, unused) e `scripts/docs-guard.sh` (código em `internal/` sem CHANGELOG/teste no mesmo diff falha o PR). (HF-91)
 - Skills do workflow versionadas: `/task`, `/code-review-task`, `/docs-sync` em `.claude/skills/<nome>/SKILL.md` (Claude Code) e `.agents/skills/<nome>.md` (agy); `task.md` plano antigo removido. (HF-96)
 
+### Changed
+- Reestruturação de pastas: `internal/`, `config/`, `pkg/`, `cmd/` movidos para `src/`; `go.mod`/`go.sum` permanecem na raiz; sem mudança de regra de negócio. (HF-97)
+
 ### Fixed
 - `pkg/observability/tracing.go` reformatado com gofmt. (HF-91)
 
