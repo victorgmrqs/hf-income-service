@@ -9,7 +9,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/victorgmrqs/hf-income-service/src/config"
+	"github.com/victorgmrqs/hf-income-service/src/internal/entity"
 	"github.com/victorgmrqs/hf-income-service/src/internal/handler"
+	incomehandler "github.com/victorgmrqs/hf-income-service/src/internal/handler/income"
+	"github.com/victorgmrqs/hf-income-service/src/internal/repository"
+	incomeUseCase "github.com/victorgmrqs/hf-income-service/src/internal/usecase/income"
 	"github.com/victorgmrqs/hf-income-service/src/pkg/database"
 	"github.com/victorgmrqs/hf-income-service/src/pkg/observability"
 )
@@ -29,11 +33,25 @@ func main() {
 		defer shutdown()
 	}
 
-	// Conexão validada na subida. O AutoMigrate das entidades entra no HF-37.
-	if _, err := database.Connect(&cfg.Database); err != nil {
+	db, err := database.Connect(&cfg.Database)
+	if err != nil {
 		log.Fatalf("failed to connect to database: %v", err)
 	}
-	logger.Info("database connected")
+	if err := db.AutoMigrate(&entity.Income{}); err != nil {
+		log.Fatalf("failed to run migrations: %v", err)
+	}
+	logger.Info("database connected and migrated")
+
+	// Wiring REC: repository -> use cases -> handler.
+	incomeRepo := repository.NewIncomeRepository(db)
+	incomeHandler := incomehandler.NewIncomeHandler(
+		incomeUseCase.NewCreateUseCase(incomeRepo, logger),
+		incomeUseCase.NewGetUseCase(incomeRepo, logger),
+		incomeUseCase.NewListUseCase(incomeRepo, logger),
+		incomeUseCase.NewUpdateUseCase(incomeRepo, logger),
+		incomeUseCase.NewDeleteUseCase(incomeRepo, logger),
+		metrics,
+	)
 
 	// Métricas Prometheus num servidor separado (scrape pelo Alloy em :APP_METRICS_PORT/metrics).
 	go func() {
@@ -46,7 +64,7 @@ func main() {
 		}
 	}()
 
-	router := handler.SetupRouter(logger, metrics)
+	router := handler.SetupRouter(logger, metrics, incomeHandler)
 	logger.Info("server listening", slog.String("port", cfg.Server.Port))
 	if err := router.Run(":" + cfg.Server.Port); err != nil {
 		log.Fatalf("failed to start server: %v", err)

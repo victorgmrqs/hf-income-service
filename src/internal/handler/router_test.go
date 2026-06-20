@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	incomehandler "github.com/victorgmrqs/hf-income-service/src/internal/handler/income"
 	"github.com/victorgmrqs/hf-income-service/src/pkg/observability"
 )
 
@@ -15,8 +16,10 @@ func init() { gin.SetMode(gin.TestMode) }
 
 func TestHealth_ReturnsOK(t *testing.T) {
 	logger := observability.NewLogger("test")
-	metrics := observability.NewServiceMetrics("hf_income_test")
-	router := SetupRouter(logger, metrics)
+	metrics := observability.NewServiceMetrics("hf_income_router_test")
+	// Use cases nil: o teste de /health não aciona rotas de domínio.
+	incomeHandler := incomehandler.NewIncomeHandler(nil, nil, nil, nil, nil, metrics)
+	router := SetupRouter(logger, metrics, incomeHandler)
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/health", nil)
