@@ -13,6 +13,7 @@ Cada entrada referencia o ticket Jira (`(HF-XX)`). Datas em `YYYY-MM-DD`.
 - Pacotes de suporte: `src/config` (`Load()` via Viper), `src/pkg/database` (`Connect()` GORM/PostgreSQL) e `src/pkg/response` (`Success()`/`Error()` com envelope `{data,error}`). (HF-56)
 - Servidor HTTP base: `src/internal/handler/router.go` (Gin + middleware de observabilidade + `GET /health`), `src/cmd/server/main.go` (wiring config → observability → DB → server) e `src/pkg/httpclient` (cliente do hf-transaction-service via interface `TransactionClient`); `/metrics` Prometheus servido em `APP_METRICS_PORT`. (HF-36)
 - CRUD de Receitas (REC): entidade `Income` (GORM, soft delete, `origin_id`), `IncomeRepository`, use cases create/get/list/update/delete e handler em `/api/v1/income` (com `total_income` agregado); validações REC-01/02/03 com `BusinessErrorsTotal` por `rule_id` e `AutoMigrate` da tabela `incomes`. (HF-37)
+- Propagação de receitas recorrentes (REC-04): `POST /api/v1/income/propagate` idempotente; use case `propagate` + repo `ListRecurrentByCompetence`/`ExistsByOriginAndCompetence`; índice único `(origin_id, competence)` garante a idempotência no banco. (HF-98)
 
 ### Changed
 - Reestruturação de pastas: `internal/`, `config/`, `pkg/`, `cmd/` movidos para `src/`; `go.mod`/`go.sum` permanecem na raiz; sem mudança de regra de negócio. (HF-97)

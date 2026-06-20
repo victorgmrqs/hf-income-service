@@ -17,6 +17,9 @@ type mockIncomeRepository struct {
 	ListFn     func(ctx context.Context, userID uuid.UUID, competence string) ([]entity.Income, error)
 	UpdateFn   func(ctx context.Context, income *entity.Income) error
 	DeleteFn   func(ctx context.Context, id uuid.UUID) error
+
+	ListRecurrentFn func(ctx context.Context, competence string) ([]entity.Income, error)
+	ExistsFn        func(ctx context.Context, originID uuid.UUID, competence string) (bool, error)
 }
 
 var _ repository.IncomeRepository = (*mockIncomeRepository)(nil)
@@ -39,4 +42,12 @@ func (m *mockIncomeRepository) Update(ctx context.Context, income *entity.Income
 
 func (m *mockIncomeRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return m.DeleteFn(ctx, id)
+}
+
+func (m *mockIncomeRepository) ListRecurrentByCompetence(ctx context.Context, competence string) ([]entity.Income, error) {
+	return m.ListRecurrentFn(ctx, competence)
+}
+
+func (m *mockIncomeRepository) ExistsByOriginAndCompetence(ctx context.Context, originID uuid.UUID, competence string) (bool, error) {
+	return m.ExistsFn(ctx, originID, competence)
 }
