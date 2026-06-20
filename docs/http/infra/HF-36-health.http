@@ -1,0 +1,10 @@
+### HF-36 — Health check (liveness)
+GET http://localhost:8081/health
+Accept: application/json
+
+# Esperado: 200 { "status": "ok" }
+
+### Métricas Prometheus (servidor separado, porta APP_METRICS_PORT)
+GET http://localhost:9090/metrics
+
+# Esperado: 200 com as métricas (http_request_duration_seconds, http_requests_total, ...)
