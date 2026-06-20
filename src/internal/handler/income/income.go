@@ -16,12 +16,13 @@ import (
 )
 
 type IncomeHandler struct {
-	createUC incomeUseCase.CreateUseCase
-	getUC    incomeUseCase.GetUseCase
-	listUC   incomeUseCase.ListUseCase
-	updateUC incomeUseCase.UpdateUseCase
-	deleteUC incomeUseCase.DeleteUseCase
-	metrics  *observability.ServiceMetrics
+	createUC    incomeUseCase.CreateUseCase
+	getUC       incomeUseCase.GetUseCase
+	listUC      incomeUseCase.ListUseCase
+	updateUC    incomeUseCase.UpdateUseCase
+	deleteUC    incomeUseCase.DeleteUseCase
+	propagateUC incomeUseCase.PropagateUseCase
+	metrics     *observability.ServiceMetrics
 }
 
 func NewIncomeHandler(
@@ -30,15 +31,17 @@ func NewIncomeHandler(
 	listUC incomeUseCase.ListUseCase,
 	updateUC incomeUseCase.UpdateUseCase,
 	deleteUC incomeUseCase.DeleteUseCase,
+	propagateUC incomeUseCase.PropagateUseCase,
 	metrics *observability.ServiceMetrics,
 ) *IncomeHandler {
 	return &IncomeHandler{
-		createUC: createUC,
-		getUC:    getUC,
-		listUC:   listUC,
-		updateUC: updateUC,
-		deleteUC: deleteUC,
-		metrics:  metrics,
+		createUC:    createUC,
+		getUC:       getUC,
+		listUC:      listUC,
+		updateUC:    updateUC,
+		deleteUC:    deleteUC,
+		propagateUC: propagateUC,
+		metrics:     metrics,
 	}
 }
 
@@ -146,6 +149,22 @@ func (h *IncomeHandler) Delete(c *gin.Context) {
 	response.Success(c, http.StatusNoContent, nil)
 }
 
+func (h *IncomeHandler) Propagate(c *gin.Context) {
+	var body propagateRequest
+	if err := c.ShouldBindJSON(&body); err != nil {
+		response.Error(c, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+		return
+	}
+	out, err := h.propagateUC.Execute(c.Request.Context(), incomeUseCase.PropagateInput{
+		Competence: body.Competence,
+	})
+	if err != nil {
+		h.handleError(c, err)
+		return
+	}
+	response.Success(c, http.StatusOK, out)
+}
+
 // handleError mapeia os erros de domínio para o envelope/HTTP e incrementa
 // BusinessErrorsTotal nas violações de regra (com o respectivo rule_id).
 func (h *IncomeHandler) handleError(c *gin.Context, err error) {
@@ -191,4 +210,8 @@ type updateIncomeRequest struct {
 	Date        *string          `json:"date"`
 	Type        *string          `json:"type"`
 	Recurrent   *bool            `json:"recurrent"`
+}
+
+type propagateRequest struct {
+	Competence string `json:"competence" binding:"required"`
 }

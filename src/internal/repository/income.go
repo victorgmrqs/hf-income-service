@@ -60,3 +60,27 @@ func (r *incomeRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	}
 	return nil
 }
+
+func (r *incomeRepository) ListRecurrentByCompetence(ctx context.Context, competence string) ([]entity.Income, error) {
+	var incomes []entity.Income
+	err := r.db.WithContext(ctx).
+		Where("recurrent = ? AND competence = ?", true, competence).
+		Order("date ASC").
+		Find(&incomes).Error
+	if err != nil {
+		return nil, err
+	}
+	return incomes, nil
+}
+
+func (r *incomeRepository) ExistsByOriginAndCompetence(ctx context.Context, originID uuid.UUID, competence string) (bool, error) {
+	var count int64
+	err := r.db.WithContext(ctx).
+		Model(&entity.Income{}).
+		Where("origin_id = ? AND competence = ?", originID, competence).
+		Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}

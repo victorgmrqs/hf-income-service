@@ -50,6 +50,7 @@ func main() {
 		incomeUseCase.NewListUseCase(incomeRepo, logger),
 		incomeUseCase.NewUpdateUseCase(incomeRepo, logger),
 		incomeUseCase.NewDeleteUseCase(incomeRepo, logger),
+		incomeUseCase.NewPropagateUseCase(incomeRepo, logger),
 		metrics,
 	)
 

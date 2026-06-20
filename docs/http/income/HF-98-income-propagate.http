@@ -1,0 +1,44 @@
+### HF-98 — Propagação de receitas recorrentes (REC-04). Base: http://localhost:8081/api/v1
+@base = http://localhost:8081/api/v1
+@user = 00000000-0000-0000-0000-000000000001
+
+### Pré-condição: criar uma receita RECORRENTE em 2026-06
+POST {{base}}/income
+Content-Type: application/json
+
+{
+  "user_id": "{{user}}",
+  "description": "Salário",
+  "amount": "5000.00",
+  "date": "2026-06-05",
+  "competence": "2026-06",
+  "type": "SALARY",
+  "recurrent": true
+}
+
+### Cenário: propagar para 2026-07 (200 { "propagated": N })
+POST {{base}}/income/propagate
+Content-Type: application/json
+
+{ "competence": "2026-07" }
+
+### Cenário: idempotência — repetir a mesma propagação (200 { "propagated": 0 })
+POST {{base}}/income/propagate
+Content-Type: application/json
+
+{ "competence": "2026-07" }
+
+### Cenário: sem recorrentes na competência anterior (200 { "propagated": 0 })
+POST {{base}}/income/propagate
+Content-Type: application/json
+
+{ "competence": "2027-01" }
+
+### Cenário: competence inválida (400 INVALID_COMPETENCE)
+POST {{base}}/income/propagate
+Content-Type: application/json
+
+{ "competence": "2026/07" }
+
+### Verificação: listar 2026-07 deve incluir a cópia propagada (origin_id preenchido)
+GET {{base}}/income?user_id={{user}}&competence=2026-07

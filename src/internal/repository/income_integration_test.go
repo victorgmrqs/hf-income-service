@@ -128,3 +128,71 @@ func TestIncomeRepository_Integration(t *testing.T) {
 		t.Errorf("delete missing: err = %v, want ErrRecordNotFound", err)
 	}
 }
+
+// TestIncomeRepository_PropagateIdempotency valida os métodos de propagação e o
+// índice único (origin_id, competence) que garante a idempotência no banco (REC-04).
+func TestIncomeRepository_PropagateIdempotency(t *testing.T) {
+	db := newTestDB(t)
+	repo := NewIncomeRepository(db)
+	ctx := context.Background()
+	userID := uuid.New()
+
+	original := &entity.Income{
+		UserID:      userID,
+		Description: "Salário",
+		Amount:      decimal.RequireFromString("5000.00"),
+		Date:        time.Now(),
+		Competence:  "2026-06",
+		Type:        entity.IncomeTypeSalary,
+		Recurrent:   true,
+	}
+	if err := repo.Create(ctx, original); err != nil {
+		t.Fatalf("create original: %v", err)
+	}
+
+	recurrent, err := repo.ListRecurrentByCompetence(ctx, "2026-06")
+	if err != nil {
+		t.Fatalf("list recurrent: %v", err)
+	}
+	if len(recurrent) != 1 {
+		t.Fatalf("recurrent = %d, want 1", len(recurrent))
+	}
+
+	// Primeira cópia propagada para 2026-07.
+	copy1 := &entity.Income{
+		UserID:      userID,
+		Description: "Salário",
+		Amount:      original.Amount,
+		Date:        time.Now(),
+		Competence:  "2026-07",
+		Type:        entity.IncomeTypeSalary,
+		Recurrent:   true,
+		OriginID:    &original.ID,
+	}
+	if err := repo.Create(ctx, copy1); err != nil {
+		t.Fatalf("create copy: %v", err)
+	}
+
+	exists, err := repo.ExistsByOriginAndCompetence(ctx, original.ID, "2026-07")
+	if err != nil {
+		t.Fatalf("exists: %v", err)
+	}
+	if !exists {
+		t.Error("expected propagated copy to exist for origin+competence")
+	}
+
+	// Segunda cópia idêntica (mesmo origin_id + competence) deve violar o unique index.
+	dup := &entity.Income{
+		UserID:      userID,
+		Description: "Salário",
+		Amount:      original.Amount,
+		Date:        time.Now(),
+		Competence:  "2026-07",
+		Type:        entity.IncomeTypeSalary,
+		Recurrent:   true,
+		OriginID:    &original.ID,
+	}
+	if err := repo.Create(ctx, dup); err == nil {
+		t.Error("expected unique violation creating duplicate propagated income")
+	}
+}
