@@ -1,0 +1,89 @@
+### HF-37 — CRUD de Receitas (REC). Base: http://localhost:8081/api/v1
+@base = http://localhost:8081/api/v1
+@user = 00000000-0000-0000-0000-000000000001
+
+### Cenário: criação bem-sucedida (201)
+POST {{base}}/income
+Content-Type: application/json
+
+{
+  "user_id": "{{user}}",
+  "description": "Salário junho",
+  "amount": "5000.00",
+  "date": "2026-06-05",
+  "competence": "2026-06",
+  "type": "SALARY",
+  "recurrent": false
+}
+
+### Cenário: campo obrigatório ausente — REC-01 (400 MISSING_REQUIRED_FIELD)
+POST {{base}}/income
+Content-Type: application/json
+
+{
+  "user_id": "{{user}}",
+  "amount": "100.00",
+  "date": "2026-06-05",
+  "competence": "2026-06",
+  "type": "SALARY"
+}
+
+### Cenário: amount inválido — REC-02 (400 INVALID_AMOUNT)
+POST {{base}}/income
+Content-Type: application/json
+
+{
+  "user_id": "{{user}}",
+  "description": "Salário",
+  "amount": "-10.00",
+  "date": "2026-06-05",
+  "competence": "2026-06",
+  "type": "SALARY"
+}
+
+### Cenário: type inválido — REC-01 (400 INVALID_INCOME_TYPE)
+POST {{base}}/income
+Content-Type: application/json
+
+{
+  "user_id": "{{user}}",
+  "description": "Bônus",
+  "amount": "100.00",
+  "date": "2026-06-05",
+  "competence": "2026-06",
+  "type": "CRYPTO"
+}
+
+### Cenário: competence inválida — REC-01 (400 INVALID_COMPETENCE)
+POST {{base}}/income
+Content-Type: application/json
+
+{
+  "user_id": "{{user}}",
+  "description": "Salário",
+  "amount": "100.00",
+  "date": "2026-06-05",
+  "competence": "2026/06",
+  "type": "SALARY"
+}
+
+### Cenário: listagem por usuário/competência com total_income (200)
+GET {{base}}/income?user_id={{user}}&competence=2026-06
+
+### Cenário: buscar por ID (200) — substitua :id
+GET {{base}}/income/00000000-0000-0000-0000-000000000000
+
+### Cenário: ID inexistente (404 INCOME_NOT_FOUND)
+GET {{base}}/income/11111111-1111-1111-1111-111111111111
+
+### Cenário: editar (200) — substitua :id
+PUT {{base}}/income/00000000-0000-0000-0000-000000000000
+Content-Type: application/json
+
+{
+  "description": "Salário corrigido",
+  "amount": "5200.00"
+}
+
+### Cenário: soft delete (204) — substitua :id
+DELETE {{base}}/income/00000000-0000-0000-0000-000000000000

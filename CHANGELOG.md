@@ -12,6 +12,7 @@ Cada entrada referencia o ticket Jira (`(HF-XX)`). Datas em `YYYY-MM-DD`.
 - Skills do workflow versionadas: `/task`, `/code-review-task`, `/docs-sync` em `.claude/skills/<nome>/SKILL.md` (Claude Code) e `.agents/skills/<nome>.md` (agy); `task.md` plano antigo removido. (HF-96)
 - Pacotes de suporte: `src/config` (`Load()` via Viper), `src/pkg/database` (`Connect()` GORM/PostgreSQL) e `src/pkg/response` (`Success()`/`Error()` com envelope `{data,error}`). (HF-56)
 - Servidor HTTP base: `src/internal/handler/router.go` (Gin + middleware de observabilidade + `GET /health`), `src/cmd/server/main.go` (wiring config → observability → DB → server) e `src/pkg/httpclient` (cliente do hf-transaction-service via interface `TransactionClient`); `/metrics` Prometheus servido em `APP_METRICS_PORT`. (HF-36)
+- CRUD de Receitas (REC): entidade `Income` (GORM, soft delete, `origin_id`), `IncomeRepository`, use cases create/get/list/update/delete e handler em `/api/v1/income` (com `total_income` agregado); validações REC-01/02/03 com `BusinessErrorsTotal` por `rule_id` e `AutoMigrate` da tabela `incomes`. (HF-37)
 
 ### Changed
 - Reestruturação de pastas: `internal/`, `config/`, `pkg/`, `cmd/` movidos para `src/`; `go.mod`/`go.sum` permanecem na raiz; sem mudança de regra de negócio. (HF-97)
@@ -22,3 +23,4 @@ Cada entrada referencia o ticket Jira (`(HF-XX)`). Datas em `YYYY-MM-DD`.
 ### Dependencies
 - `go mod tidy`: requires indiretos sincronizados no `go.mod` (entradas faltantes de `gin` e transitivos). (HF-91)
 - Adicionados `github.com/spf13/viper`, `gorm.io/gorm`, `gorm.io/driver/postgres`. (HF-56)
+- Adicionados `github.com/shopspring/decimal` (direto) e, para testes de integração, `github.com/testcontainers/testcontainers-go` (+ módulo postgres). (HF-37)
