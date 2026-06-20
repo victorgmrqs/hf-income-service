@@ -4,7 +4,8 @@
 *.dll
 *.so
 *.dylib
-server
+# binário compilado na raiz (go build ./src/cmd/server) — ancorado p/ não ignorar src/cmd/server/
+/server
 
 # Test binary
 *.test
