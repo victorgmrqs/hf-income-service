@@ -1,6 +1,5 @@
-// Package httpclient fornece um cliente HTTP para o hf-transaction-service.
-// O acesso é feito por interface (TransactionClient) para permitir mocks nos
-// testes unitários dos use cases que dependem dele (ex.: cálculo de saldo).
+// Package httpclient fornece um cliente HTTP de baixo nível para o hf-transaction-service.
+// Use TransactionClient (definida em transaction_client.go) para injeção nos use cases.
 package httpclient
 
 import (
@@ -11,12 +10,7 @@ import (
 	"time"
 )
 
-// TransactionClient abstrai as chamadas ao hf-transaction-service.
-type TransactionClient interface {
-	Get(ctx context.Context, path string, out any) error
-}
-
-// Client é a implementação concreta sobre net/http.
+// Client é o transporte HTTP de baixo nível sobre net/http.
 type Client struct {
 	baseURL    string
 	httpClient *http.Client

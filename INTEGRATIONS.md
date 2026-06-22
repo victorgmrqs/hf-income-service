@@ -11,10 +11,11 @@ Toda comunicação é HTTP REST. O cliente HTTP está em `pkg/httpclient/transac
 ## Interface do cliente HTTP
 
 ```go
-// pkg/httpclient/interfaces.go
+// pkg/httpclient/transaction_client.go
 type TransactionClient interface {
     GetExpenseTotals(ctx context.Context, userID, competence string) (*ExpenseTotalsOutput, error)
-    GetPendingBills(ctx context.Context, userID, competence string) ([]PendingBillOutput, error)
+    GetAccountsPayable(ctx context.Context, userID, dueDateUntil string) ([]PendingBillOutput, error)
+    GetExpensesByCategory(ctx context.Context, userID, categoryID, competence string) (*ExpensesByCategoryOutput, error)
 }
 ```
 
@@ -113,6 +114,29 @@ func lastDayOfMonth(competence string) (string, error) {
 balance.committed_bills  = sum(account.amount for account in pending_bills)
 balance.projected_balance = balance.balance_today - balance.committed_bills
 ```
+
+---
+
+## Endpoint 3 — Despesas por categoria (placeholder MET)
+
+**Usado em:** MET (domínio de metas de redução — não implementado ainda)
+
+**Contrato (provisório):**
+
+```
+GET /api/v1/expenses/user/{user_id}/by-category?category_id={uuid}&competence=YYYY-MM
+```
+
+**Response (200):**
+
+```json
+{
+  "data": { "category_id": "uuid", "total": 500.00 },
+  "error": null
+}
+```
+
+> Contrato sujeito a revisão quando fdd-003-met.md definir o uso completo. (HF-57)
 
 ---
 
