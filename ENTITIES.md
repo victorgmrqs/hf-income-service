@@ -75,7 +75,7 @@ Income
 | category_id | UUID | Sim | Categoria (referência externa — hf-transaction-service) |
 | competence | string(7) | Sim | Mês de referência (YYYY-MM) |
 | target_amount | decimal(10,2) | Sim | Valor máximo que deseja gastar nesta categoria |
-| previous_amount | decimal(10,2) | Sim | Snapshot do gasto do mês anterior (capturado na criação) |
+| previous_amount | decimal(10,2) | Não | Snapshot do gasto do mês anterior (capturado na criação; `null` quando hf-transaction-service indisponível) |
 | achieved | bool | Não | `null` = mês em curso; `true/false` = resultado final |
 | deleted_at | timestamp | Não | Soft delete (GORM) |
 | created_at | timestamp | Sim | — |
