@@ -32,6 +32,7 @@ func SetupRouter(
 		income := api.Group("/income")
 		{
 			income.POST("", incomeHandler.Create)
+			income.POST("/propagate", incomeHandler.Propagate)
 			income.GET("", incomeHandler.List)
 			income.GET("/:id", incomeHandler.GetByID)
 			income.PUT("/:id", incomeHandler.Update)
