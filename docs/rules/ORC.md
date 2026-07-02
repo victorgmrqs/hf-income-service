@@ -4,7 +4,7 @@
 
 | ID | Regra | Status | Critério de Aceite |
 |----|-------|--------|-------------------|
-| ORC-01 | Teto global é um valor mensal definido por `user_id` e `competence` | 📅 | Cada usuário tem no máximo um teto por competência |
+| ORC-01 | Teto global é um valor mensal definido por `user_id` e `competence` | ✅ | Cada usuário tem no máximo um teto por competência (unique `(user_id, competence)` + 409; `ceiling > 0`; edição manual força `auto_adjusted=false`) — HF-43 |
 | ORC-02 | Teto padrão inicial pode ser igual à receita total do mês (opcional, definido pelo usuário) | 📅 | — |
 | ORC-03 | **Auto-ajuste:** se gasto anterior < teto anterior → próximo teto = gasto anterior | 📅 | Resultado de `auto-adjust` é auditável: `auto_adjusted: true` no registro |
 | ORC-04 | Se gasto anterior = teto anterior → próximo teto permanece igual | 📅 | `auto_adjusted: false` quando não há ajuste |

@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	globalbudgethandler "github.com/victorgmrqs/hf-income-service/src/internal/handler/global_budget"
 	incomehandler "github.com/victorgmrqs/hf-income-service/src/internal/handler/income"
 	"github.com/victorgmrqs/hf-income-service/src/pkg/observability"
 )
@@ -17,6 +18,7 @@ func SetupRouter(
 	logger *slog.Logger,
 	metrics *observability.ServiceMetrics,
 	incomeHandler *incomehandler.IncomeHandler,
+	globalBudgetHandler *globalbudgethandler.GlobalBudgetHandler,
 ) *gin.Engine {
 	router := gin.New()
 	router.Use(gin.Recovery())
@@ -37,6 +39,13 @@ func SetupRouter(
 			income.GET("/:id", incomeHandler.GetByID)
 			income.PUT("/:id", incomeHandler.Update)
 			income.DELETE("/:id", incomeHandler.Delete)
+		}
+
+		budgets := api.Group("/budgets/global")
+		{
+			budgets.POST("", globalBudgetHandler.Create)
+			budgets.GET("", globalBudgetHandler.Get)
+			budgets.PUT("/:id", globalBudgetHandler.Update)
 		}
 	}
 

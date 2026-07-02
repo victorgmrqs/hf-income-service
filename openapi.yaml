@@ -189,6 +189,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseGlobalBudget'
+        '400':
+          $ref: '#/components/responses/ValidationError'
         '409':
           $ref: '#/components/responses/Conflict'
 
@@ -241,6 +243,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseGlobalBudget'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /budgets/global/preview-next:
     get:
@@ -513,7 +519,7 @@ components:
         competence: { type: string, pattern: '^\d{4}-\d{2}$' }
         ceiling: { type: number }
         auto_adjusted: { type: boolean }
-        updated_at: { type: string, format: date-time }
+        created_at: { type: string, format: date-time }
 
     CreateGlobalBudgetRequest:
       type: object
