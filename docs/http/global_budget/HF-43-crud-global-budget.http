@@ -1,0 +1,84 @@
+### HF-43 — CRUD de Teto Global (ORC). Base: http://localhost:8081/api/v1
+@base = http://localhost:8081/api/v1
+@user = 00000000-0000-0000-0000-000000000001
+
+### Cenário: criação bem-sucedida (201) — auto_adjusted:false
+POST {{base}}/budgets/global
+Content-Type: application/json
+
+{
+  "user_id": "{{user}}",
+  "competence": "2026-06",
+  "ceiling": "5000.00"
+}
+
+### Cenário: campo obrigatório ausente — ORC-01 (400 MISSING_REQUIRED_FIELD)
+POST {{base}}/budgets/global
+Content-Type: application/json
+
+{
+  "user_id": "{{user}}",
+  "ceiling": "5000.00"
+}
+
+### Cenário: ceiling <= 0 — ORC-01 (400 INVALID_CEILING)
+POST {{base}}/budgets/global
+Content-Type: application/json
+
+{
+  "user_id": "{{user}}",
+  "competence": "2026-06",
+  "ceiling": "0"
+}
+
+### Cenário: competence fora do formato YYYY-MM — ORC-01 (400 INVALID_COMPETENCE)
+POST {{base}}/budgets/global
+Content-Type: application/json
+
+{
+  "user_id": "{{user}}",
+  "competence": "2026/06",
+  "ceiling": "5000.00"
+}
+
+### Cenário: teto já existe para a competência — ORC-01 (409 BUDGET_ALREADY_EXISTS)
+# Reenvie o primeiro request para reproduzir o conflito.
+POST {{base}}/budgets/global
+Content-Type: application/json
+
+{
+  "user_id": "{{user}}",
+  "competence": "2026-06",
+  "ceiling": "5000.00"
+}
+
+### Cenário: consulta bem-sucedida por competência (200)
+GET {{base}}/budgets/global?user_id={{user}}&competence=2026-06
+
+### Cenário: teto não encontrado (404 BUDGET_NOT_FOUND)
+GET {{base}}/budgets/global?user_id={{user}}&competence=2099-01
+
+### Cenário: edição manual bem-sucedida (200) — força auto_adjusted:false (ORC-05)
+# Substitua :id pelo id retornado na criação.
+PUT {{base}}/budgets/global/00000000-0000-0000-0000-000000000000
+Content-Type: application/json
+
+{
+  "ceiling": "4800.00"
+}
+
+### Cenário: edição com ceiling <= 0 — ORC-01 (400 INVALID_CEILING)
+PUT {{base}}/budgets/global/00000000-0000-0000-0000-000000000000
+Content-Type: application/json
+
+{
+  "ceiling": "-10.00"
+}
+
+### Cenário: edição de teto inexistente (404 BUDGET_NOT_FOUND)
+PUT {{base}}/budgets/global/11111111-1111-1111-1111-111111111111
+Content-Type: application/json
+
+{
+  "ceiling": "4800.00"
+}

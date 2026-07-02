@@ -11,8 +11,10 @@ import (
 	"github.com/victorgmrqs/hf-income-service/src/config"
 	"github.com/victorgmrqs/hf-income-service/src/internal/entity"
 	"github.com/victorgmrqs/hf-income-service/src/internal/handler"
+	globalbudgethandler "github.com/victorgmrqs/hf-income-service/src/internal/handler/global_budget"
 	incomehandler "github.com/victorgmrqs/hf-income-service/src/internal/handler/income"
 	"github.com/victorgmrqs/hf-income-service/src/internal/repository"
+	budgetUseCase "github.com/victorgmrqs/hf-income-service/src/internal/usecase/global_budget"
 	incomeUseCase "github.com/victorgmrqs/hf-income-service/src/internal/usecase/income"
 	"github.com/victorgmrqs/hf-income-service/src/pkg/database"
 	"github.com/victorgmrqs/hf-income-service/src/pkg/observability"
@@ -37,7 +39,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to connect to database: %v", err)
 	}
-	if err := db.AutoMigrate(&entity.Income{}); err != nil {
+	if err := db.AutoMigrate(&entity.Income{}, &entity.GlobalBudget{}); err != nil {
 		log.Fatalf("failed to run migrations: %v", err)
 	}
 	logger.Info("database connected and migrated")
@@ -54,6 +56,15 @@ func main() {
 		metrics,
 	)
 
+	// Wiring ORC: repository -> use cases -> handler.
+	globalBudgetRepo := repository.NewGlobalBudgetRepository(db)
+	globalBudgetHandler := globalbudgethandler.NewGlobalBudgetHandler(
+		budgetUseCase.NewCreateUseCase(globalBudgetRepo, logger),
+		budgetUseCase.NewGetUseCase(globalBudgetRepo, logger),
+		budgetUseCase.NewUpdateUseCase(globalBudgetRepo, logger),
+		metrics,
+	)
+
 	// Métricas Prometheus num servidor separado (scrape pelo Alloy em :APP_METRICS_PORT/metrics).
 	go func() {
 		mux := http.NewServeMux()
@@ -65,7 +76,7 @@ func main() {
 		}
 	}()
 
-	router := handler.SetupRouter(logger, metrics, incomeHandler)
+	router := handler.SetupRouter(logger, metrics, incomeHandler, globalBudgetHandler)
 	logger.Info("server listening", slog.String("port", cfg.Server.Port))
 	if err := router.Run(":" + cfg.Server.Port); err != nil {
 		log.Fatalf("failed to start server: %v", err)
