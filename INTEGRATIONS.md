@@ -119,6 +119,29 @@ balance.projected_balance = balance.balance_today - balance.committed_bills
 
 ---
 
+## Endpoint 3 — Despesas por categoria (placeholder MET)
+
+**Usado em:** MET (domínio de metas de redução — não implementado ainda)
+
+**Contrato (provisório):**
+
+```
+GET /api/v1/expenses/user/{user_id}/by-category?category_id={uuid}&competence=YYYY-MM
+```
+
+**Response (200):**
+
+```json
+{
+  "data": { "category_id": "uuid", "total": 500.00 },
+  "error": null
+}
+```
+
+> Contrato sujeito a revisão quando fdd-003-met.md definir o uso completo. (HF-57)
+
+---
+
 ## Variáveis de ambiente
 
 ```env
