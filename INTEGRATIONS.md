@@ -2,29 +2,32 @@
 
 ## Dependências externas
 
-Este serviço consome a API do `hf-transaction-service` para calcular saldo e despesas comprometidas (domínio SAL).
+Este serviço consome a API do `hf-transaction-service` para o auto-ajuste do teto global (domínio ORC) e para calcular saldo e despesas comprometidas (domínio SAL).
 
-Toda comunicação é HTTP REST. O cliente HTTP está em `pkg/httpclient/transaction_client.go` e é injetado via interface — nunca chamado diretamente nos use cases.
+Toda comunicação é HTTP REST. O cliente HTTP está em `src/pkg/httpclient/client.go` e é injetado via interface — nunca chamado diretamente nos use cases.
 
 ---
 
 ## Interface do cliente HTTP
 
 ```go
-// pkg/httpclient/interfaces.go
+// src/pkg/httpclient/client.go
 type TransactionClient interface {
     GetExpenseTotals(ctx context.Context, userID, competence string) (*ExpenseTotalsOutput, error)
-    GetPendingBills(ctx context.Context, userID, competence string) ([]PendingBillOutput, error)
 }
 ```
 
-Os use cases dependem apenas dessa interface — o cliente HTTP concreto é injetado em `cmd/server/main.go`.
+Os use cases dependem apenas dessa interface — o cliente HTTP concreto é injetado em `cmd/server/main.go` (`TRANSACTION_SERVICE_URL`). Timeout de 5s.
+
+> `GetPendingBills` (contas a pagar, domínio SAL) será adicionado à interface quando o `/balance` for implementado (HF-41/HF-74).
 
 ---
 
 ## Endpoint 1 — Totais de despesas
 
-**Usado em:** SAL-01 (`total_expenses` no response de `/balance`)
+**Usado em:**
+- ORC-03/04 (`auto-adjust` e `preview-next` — gasto do mês anterior/corrente) — HF-44
+- SAL-01 (`total_expenses` no response de `/balance`) — planejado
 
 **Contrato:**
 

@@ -272,8 +272,14 @@ metrics.BusinessErrorsTotal.WithLabelValues("ORC", "upstream").Inc()
 - `global_budget/auto_adjust.go` chama `httpclient.GetExpenseTotals` — depende do contrato de INTEGRATIONS.md
 
 **Indice recomendado**
+
+> Atualizado no HF-44: `GlobalBudget` passou a usar soft delete (`deleted_at`) — ver ADR-001.
+> O indice unico e PARCIAL para permitir recriar o teto da competencia apos exclusao
+> (aplicado por `repository.EnsureGlobalBudgetIndexes`, fora do AutoMigrate).
+
 ```sql
-CREATE UNIQUE INDEX idx_global_budgets_user_competence ON global_budgets (user_id, competence);
+CREATE UNIQUE INDEX idx_global_budgets_user_competence_active
+    ON global_budgets (user_id, competence) WHERE deleted_at IS NULL;
 ```
 
 ---

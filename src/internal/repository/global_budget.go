@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 
 	"github.com/google/uuid"
 	"github.com/victorgmrqs/hf-income-service/src/internal/entity"
@@ -14,6 +15,19 @@ type globalBudgetRepository struct {
 
 func NewGlobalBudgetRepository(db *gorm.DB) GlobalBudgetRepository {
 	return &globalBudgetRepository{db: db}
+}
+
+// EnsureGlobalBudgetIndexes aplica o índice único parcial de ORC-01:
+// (user_id, competence) WHERE deleted_at IS NULL — um teto ativo por competência,
+// permitindo recriar após soft delete (HF-44). Remove o índice full antigo do
+// HF-59 (drop idempotente; no-op a partir da segunda execução). Chamado no
+// main.go após o AutoMigrate e no setup dos testes de integração.
+func EnsureGlobalBudgetIndexes(db *gorm.DB) error {
+	if err := db.Exec(`DROP INDEX IF EXISTS idx_global_budgets_user_competence`).Error; err != nil {
+		return err
+	}
+	return db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_global_budgets_user_competence_active
+		ON global_budgets (user_id, competence) WHERE deleted_at IS NULL`).Error
 }
 
 func (r *globalBudgetRepository) Create(ctx context.Context, budget *entity.GlobalBudget) error {
@@ -47,4 +61,54 @@ func (r *globalBudgetRepository) GetByUserAndCompetence(ctx context.Context, use
 // são mantidos imutáveis pela camada de use case (ORC-01).
 func (r *globalBudgetRepository) Update(ctx context.Context, budget *entity.GlobalBudget) error {
 	return r.db.WithContext(ctx).Save(budget).Error
+}
+
+// ExistsByUserAndCompetence indica se há teto ativo para o par (ORC-01).
+// Registros soft-deletados são ignorados automaticamente pelo GORM.
+func (r *globalBudgetRepository) ExistsByUserAndCompetence(ctx context.Context, userID uuid.UUID, competence string) (bool, error) {
+	var count int64
+	err := r.db.WithContext(ctx).
+		Model(&entity.GlobalBudget{}).
+		Where("user_id = ? AND competence = ?", userID, competence).
+		Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+// Upsert cria o teto se não existir para (user_id, competence) e atualiza
+// ceiling/auto_adjusted se já existir — idempotência do auto-ajuste (ORC-03/04/05).
+// Corrida entre a busca e o Create é coberta pelo índice único parcial.
+func (r *globalBudgetRepository) Upsert(ctx context.Context, budget *entity.GlobalBudget) error {
+	var existing entity.GlobalBudget
+	err := r.db.WithContext(ctx).
+		Where("user_id = ? AND competence = ?", budget.UserID, budget.Competence).
+		First(&existing).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return r.db.WithContext(ctx).Create(budget).Error
+	}
+	if err != nil {
+		return err
+	}
+	existing.Ceiling = budget.Ceiling
+	existing.AutoAdjusted = budget.AutoAdjusted
+	if err := r.db.WithContext(ctx).Save(&existing).Error; err != nil {
+		return err
+	}
+	*budget = existing
+	return nil
+}
+
+// Delete aplica soft delete (gorm.DeletedAt). Retorna ErrRecordNotFound quando
+// nenhum registro ativo é afetado.
+func (r *globalBudgetRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	res := r.db.WithContext(ctx).Delete(&entity.GlobalBudget{}, "id = ?", id)
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
 }

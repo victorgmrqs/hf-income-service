@@ -3,9 +3,36 @@ package global_budget
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"go.opentelemetry.io/otel/trace"
 )
+
+const competenceLayout = "2006-01"
+
+// previousCompetence retorna a competência imediatamente anterior (YYYY-MM),
+// cobrindo a virada de ano (2026-01 → 2025-12).
+func previousCompetence(competence string) (string, error) {
+	t, err := time.Parse(competenceLayout, competence)
+	if err != nil {
+		return "", err
+	}
+	return t.AddDate(0, -1, 0).Format(competenceLayout), nil
+}
+
+// nextCompetence retorna a competência imediatamente seguinte (2026-12 → 2027-01).
+func nextCompetence(competence string) (string, error) {
+	t, err := time.Parse(competenceLayout, competence)
+	if err != nil {
+		return "", err
+	}
+	return t.AddDate(0, 1, 0).Format(competenceLayout), nil
+}
+
+// currentCompetence deriva a competência corrente (YYYY-MM) de um instante.
+func currentCompetence(now time.Time) string {
+	return now.Format(competenceLayout)
+}
 
 // traceIDFromContext extrai o trace_id do span ativo (vazio se não houver),
 // para correlacionar logs com as traces no Grafana.

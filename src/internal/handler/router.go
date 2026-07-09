@@ -45,6 +45,9 @@ func SetupRouter(
 		{
 			budgets.POST("", globalBudgetHandler.Create)
 			budgets.GET("", globalBudgetHandler.Get)
+			// Rotas literais antes de /:id para não conflitar (ORC-03/04/05).
+			budgets.GET("/preview-next", globalBudgetHandler.PreviewNext)
+			budgets.POST("/auto-adjust", globalBudgetHandler.AutoAdjust)
 			budgets.PUT("/:id", globalBudgetHandler.Update)
 		}
 	}

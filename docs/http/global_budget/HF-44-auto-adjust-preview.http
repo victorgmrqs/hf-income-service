@@ -1,0 +1,88 @@
+### HF-44 — Auto-ajuste progressivo do teto global (ORC-03/04/05). Base: http://localhost:8081/api/v1
+@base = http://localhost:8081/api/v1
+@user = 00000000-0000-0000-0000-000000000001
+
+### Pré-requisito: teto da competência corrente (base do preview e do auto-adjust)
+POST {{base}}/budgets/global
+Content-Type: application/json
+
+{
+  "user_id": "{{user}}",
+  "competence": "2026-07",
+  "ceiling": "5000.00"
+}
+
+### Cenário: preview do próximo mês (200) — gasto < teto → spending_below_ceiling (ORC-03)
+GET {{base}}/budgets/global/preview-next?user_id={{user}}
+
+### Cenário: preview sem teto na competência corrente — ORC-03 (400 NO_PREVIOUS_BUDGET)
+# Use um user_id sem teto cadastrado.
+GET {{base}}/budgets/global/preview-next?user_id=99999999-9999-9999-9999-999999999999
+
+### Cenário: preview com hf-transaction-service indisponível (503 UPSTREAM_UNAVAILABLE)
+# Derrube o hf-transaction-service (ou aponte TRANSACTION_SERVICE_URL para porta morta) e repita:
+GET {{base}}/budgets/global/preview-next?user_id={{user}}
+
+### Cenário: auto-adjust aplicado (200) — gasto < teto → teto = gasto, auto_adjusted:true (ORC-03)
+# competence é a competência de DESTINO; a base é a anterior (2026-07).
+POST {{base}}/budgets/global/auto-adjust
+Content-Type: application/json
+
+{
+  "user_id": "{{user}}",
+  "competence": "2026-08"
+}
+
+### Cenário: auto-adjust idempotente (200) — repetir a mesma chamada não duplica registro (ORC-05)
+POST {{base}}/budgets/global/auto-adjust
+Content-Type: application/json
+
+{
+  "user_id": "{{user}}",
+  "competence": "2026-08"
+}
+
+### Cenário: auto-adjust sem teto anterior — ORC-03 (400 NO_PREVIOUS_BUDGET)
+POST {{base}}/budgets/global/auto-adjust
+Content-Type: application/json
+
+{
+  "user_id": "99999999-9999-9999-9999-999999999999",
+  "competence": "2026-08"
+}
+
+### Cenário: campo obrigatório ausente — ORC-01 (400)
+POST {{base}}/budgets/global/auto-adjust
+Content-Type: application/json
+
+{
+  "user_id": "{{user}}"
+}
+
+### Cenário: competence fora do formato YYYY-MM — ORC-01 (400 INVALID_COMPETENCE)
+POST {{base}}/budgets/global/auto-adjust
+Content-Type: application/json
+
+{
+  "user_id": "{{user}}",
+  "competence": "2026/08"
+}
+
+### Cenário: auto-adjust com hf-transaction-service indisponível (503 UPSTREAM_UNAVAILABLE)
+# Derrube o hf-transaction-service e repita:
+POST {{base}}/budgets/global/auto-adjust
+Content-Type: application/json
+
+{
+  "user_id": "{{user}}",
+  "competence": "2026-08"
+}
+
+### Verificação: teto editável manualmente após o auto-ajuste (ORC-05) — seta auto_adjusted:false
+# Substitua :id pelo id retornado no auto-adjust.
+PUT {{base}}/budgets/global/00000000-0000-0000-0000-000000000000
+Content-Type: application/json
+
+{
+  "ceiling": "4500.00"
+}
