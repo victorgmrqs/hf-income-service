@@ -18,3 +18,8 @@ var ErrInvalidCompetence = errors.New("competence must be in YYYY-MM format")
 var ErrBudgetAlreadyExists = errors.New("a global budget already exists for this user and competence")
 
 var ErrBudgetNotFound = errors.New("global budget not found")
+
+// ORC-03
+var ErrNoPreviousBudget = errors.New("no previous budget found to base the auto-adjustment on")
+
+var ErrUpstreamUnavailable = errors.New("could not fetch expense data from hf-transaction-service")

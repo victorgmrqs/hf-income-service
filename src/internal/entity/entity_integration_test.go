@@ -14,6 +14,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/victorgmrqs/hf-income-service/src/internal/entity"
+	"github.com/victorgmrqs/hf-income-service/src/internal/repository"
 )
 
 func newEntityTestDB(t *testing.T) *gorm.DB {
@@ -47,6 +48,11 @@ func newEntityTestDB(t *testing.T) *gorm.DB {
 		&entity.ReductionGoal{},
 	); err != nil {
 		t.Fatalf("automigrate: %v", err)
+	}
+	// ORC-01 (HF-44): a unicidade de GlobalBudget é um índice único PARCIAL
+	// criado fora do AutoMigrate — mesmo caminho de migração do main.go.
+	if err := repository.EnsureGlobalBudgetIndexes(db); err != nil {
+		t.Fatalf("ensure global budget indexes: %v", err)
 	}
 	return db
 }

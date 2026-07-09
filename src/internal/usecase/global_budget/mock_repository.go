@@ -16,6 +16,9 @@ type mockGlobalBudgetRepository struct {
 	GetByIDFn                func(ctx context.Context, id uuid.UUID) (*entity.GlobalBudget, error)
 	GetByUserAndCompetenceFn func(ctx context.Context, userID uuid.UUID, competence string) (*entity.GlobalBudget, error)
 	UpdateFn                 func(ctx context.Context, budget *entity.GlobalBudget) error
+	ExistsFn                 func(ctx context.Context, userID uuid.UUID, competence string) (bool, error)
+	UpsertFn                 func(ctx context.Context, budget *entity.GlobalBudget) error
+	DeleteFn                 func(ctx context.Context, id uuid.UUID) error
 }
 
 var _ repository.GlobalBudgetRepository = (*mockGlobalBudgetRepository)(nil)
@@ -34,4 +37,16 @@ func (m *mockGlobalBudgetRepository) GetByUserAndCompetence(ctx context.Context,
 
 func (m *mockGlobalBudgetRepository) Update(ctx context.Context, budget *entity.GlobalBudget) error {
 	return m.UpdateFn(ctx, budget)
+}
+
+func (m *mockGlobalBudgetRepository) ExistsByUserAndCompetence(ctx context.Context, userID uuid.UUID, competence string) (bool, error) {
+	return m.ExistsFn(ctx, userID, competence)
+}
+
+func (m *mockGlobalBudgetRepository) Upsert(ctx context.Context, budget *entity.GlobalBudget) error {
+	return m.UpsertFn(ctx, budget)
+}
+
+func (m *mockGlobalBudgetRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	return m.DeleteFn(ctx, id)
 }

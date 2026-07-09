@@ -22,12 +22,21 @@ type IncomeRepository interface {
 }
 
 // GlobalBudgetRepository abstrai o acesso ao teto mensal de gastos (ORC).
-// ORC-01: unicidade (user_id, competence) é garantida na entidade; sem soft delete.
+// ORC-01: unicidade (user_id, competence) garantida por índice único parcial
+// (WHERE deleted_at IS NULL — ver EnsureGlobalBudgetIndexes); soft delete (HF-44).
 type GlobalBudgetRepository interface {
 	Create(ctx context.Context, budget *entity.GlobalBudget) error
 	GetByID(ctx context.Context, id uuid.UUID) (*entity.GlobalBudget, error)
 	GetByUserAndCompetence(ctx context.Context, userID uuid.UUID, competence string) (*entity.GlobalBudget, error)
 	Update(ctx context.Context, budget *entity.GlobalBudget) error
+
+	// ExistsByUserAndCompetence indica se já existe teto ativo para o par (ORC-01).
+	ExistsByUserAndCompetence(ctx context.Context, userID uuid.UUID, competence string) (bool, error)
+	// Upsert cria o teto se não existir e atualiza ceiling/auto_adjusted se existir
+	// (idempotência do auto-ajuste — ORC-03/04/05).
+	Upsert(ctx context.Context, budget *entity.GlobalBudget) error
+	// Delete aplica soft delete (gorm.DeletedAt).
+	Delete(ctx context.Context, id uuid.UUID) error
 }
 
 // ReductionGoalRepository abstrai o acesso a metas de redução por categoria (MET).

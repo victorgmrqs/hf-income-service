@@ -27,6 +27,34 @@ type UpdateInput struct {
 	Ceiling decimal.Decimal
 }
 
+// AutoAdjustInput identifica a competência de DESTINO do auto-ajuste (ORC-03/04).
+// Ex.: Competence "2026-07" ajusta o teto de julho com base no gasto de junho.
+type AutoAdjustInput struct {
+	UserID     uuid.UUID
+	Competence string // YYYY-MM
+}
+
+// PreviewInput identifica o usuário do preview; a competência corrente vem do relógio.
+type PreviewInput struct {
+	UserID uuid.UUID
+}
+
+// Valores de adjustment_reason no preview do auto-ajuste (ORC-03/04).
+const (
+	AdjustmentReasonSpendingBelowCeiling  = "spending_below_ceiling"
+	AdjustmentReasonSpendingEqualsCeiling = "spending_equals_ceiling"
+)
+
+// PreviewOutput é o cálculo do auto-ajuste sem persistência (ORC-03/04, FDD §5).
+type PreviewOutput struct {
+	CurrentCompetence string          `json:"current_competence"`
+	CurrentCeiling    decimal.Decimal `json:"current_ceiling"`
+	CurrentSpending   decimal.Decimal `json:"current_spending"`
+	NextCompetence    string          `json:"next_competence"`
+	SuggestedCeiling  decimal.Decimal `json:"suggested_ceiling"`
+	AdjustmentReason  string          `json:"adjustment_reason"`
+}
+
 // GlobalBudgetOutput é a representação pública de um teto global.
 type GlobalBudgetOutput struct {
 	ID           uuid.UUID       `json:"id"`

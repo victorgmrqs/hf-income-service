@@ -265,11 +265,15 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseAutoAdjustPreview'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '503':
+          $ref: '#/components/responses/UpstreamUnavailable'
 
   /budgets/global/auto-adjust:
     post:
       tags: [global-budget]
-      summary: Apply auto-adjustment for next competence (ORC-03/04/05)
+      summary: Apply auto-adjustment for target competence (ORC-03/04/05)
       operationId: applyGlobalBudgetAutoAdjust
       requestBody:
         required: true
@@ -277,17 +281,22 @@ paths:
           application/json:
             schema:
               type: object
-              required: [user_id, reference_competence]
+              required: [user_id, competence]
               properties:
                 user_id: { type: string, format: uuid }
-                reference_competence: { type: string, pattern: '^\d{4}-\d{2}$' }
+                # Competência de DESTINO do ajuste; a base é a competência anterior (FDD-002 §4/§5).
+                competence: { type: string, pattern: '^\d{4}-\d{2}$', example: '2026-07' }
       responses:
-        '201':
-          description: Global budget auto-adjusted for next month
+        '200':
+          description: Global budget auto-adjusted for the target competence (idempotent upsert)
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseGlobalBudget'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '503':
+          $ref: '#/components/responses/UpstreamUnavailable'
 
   # ─── Balance ──────────────────────────────────────────────────────────────
 
@@ -444,6 +453,12 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
+    UpstreamUnavailable:
+      description: hf-transaction-service unavailable (code UPSTREAM_UNAVAILABLE)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
 
   schemas:
     ErrorResponse:
@@ -545,7 +560,8 @@ components:
         suggested_ceiling: { type: number }
         adjustment_reason:
           type: string
-          enum: [spending_below_ceiling, spending_equals_ceiling, no_previous_data]
+          # Sem teto anterior o preview retorna 400 NO_PREVIOUS_BUDGET (FDD-002 §6) — não há reason "no_previous_data".
+          enum: [spending_below_ceiling, spending_equals_ceiling]
 
     ApiResponseAutoAdjustPreview:
       type: object

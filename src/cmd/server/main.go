@@ -17,6 +17,7 @@ import (
 	budgetUseCase "github.com/victorgmrqs/hf-income-service/src/internal/usecase/global_budget"
 	incomeUseCase "github.com/victorgmrqs/hf-income-service/src/internal/usecase/income"
 	"github.com/victorgmrqs/hf-income-service/src/pkg/database"
+	"github.com/victorgmrqs/hf-income-service/src/pkg/httpclient"
 	"github.com/victorgmrqs/hf-income-service/src/pkg/observability"
 )
 
@@ -42,6 +43,10 @@ func main() {
 	if err := db.AutoMigrate(&entity.Income{}, &entity.GlobalBudget{}); err != nil {
 		log.Fatalf("failed to run migrations: %v", err)
 	}
+	// ORC-01 (HF-44): índice único parcial (user_id, competence) WHERE deleted_at IS NULL.
+	if err := repository.EnsureGlobalBudgetIndexes(db); err != nil {
+		log.Fatalf("failed to ensure global budget indexes: %v", err)
+	}
 	logger.Info("database connected and migrated")
 
 	// Wiring REC: repository -> use cases -> handler.
@@ -56,12 +61,16 @@ func main() {
 		metrics,
 	)
 
-	// Wiring ORC: repository -> use cases -> handler.
+	// Wiring ORC: repository + httpclient -> use cases -> handler.
+	// O auto-ajuste (ORC-03/04) consome o hf-transaction-service via TransactionClient.
+	txClient := httpclient.NewClient(cfg.Transaction.URL)
 	globalBudgetRepo := repository.NewGlobalBudgetRepository(db)
 	globalBudgetHandler := globalbudgethandler.NewGlobalBudgetHandler(
 		budgetUseCase.NewCreateUseCase(globalBudgetRepo, logger),
 		budgetUseCase.NewGetUseCase(globalBudgetRepo, logger),
 		budgetUseCase.NewUpdateUseCase(globalBudgetRepo, logger),
+		budgetUseCase.NewAutoAdjustUseCase(globalBudgetRepo, txClient, logger),
+		budgetUseCase.NewPreviewNextUseCase(globalBudgetRepo, txClient, logger),
 		metrics,
 	)
 

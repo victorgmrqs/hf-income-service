@@ -56,13 +56,14 @@ Income
 | auto_adjusted | bool | Sim | `true` se definido pelo auto-ajuste; `false` se editado manualmente |
 | created_at | timestamp | Sim | — |
 | updated_at | timestamp | Sim | — |
+| deleted_at | timestamp | Não | Soft delete (HF-44 — supersede o "sem soft delete" do HF-59; ver ADR-001) |
 
 **Constraints:**
-- `ceiling` > 0
-- Combinação `(user_id, competence)` deve ser única (um teto por mês por usuário)
+- `ceiling` > 0 (criação/edição manual; o auto-ajuste pode resultar em teto 0 quando o gasto anterior é 0 — FDD-002 §4)
+- Combinação `(user_id, competence)` deve ser única **entre registros ativos** (um teto por mês por usuário — ORC-01)
 
 **Índices:**
-- `(user_id, competence)` UNIQUE
+- `(user_id, competence)` UNIQUE **parcial** (`WHERE deleted_at IS NULL`) — criado por `repository.EnsureGlobalBudgetIndexes` fora do AutoMigrate (a tag do GORM não expressa índice parcial); permite recriar o teto da competência após soft delete (HF-44)
 
 ---
 
@@ -102,5 +103,5 @@ Income
 ## Estratégia de Exclusão
 
 - **Income:** soft delete (`deleted_at`). Receitas deletadas não entram no cálculo de saldo.
-- **GlobalBudget:** sem soft delete — substituição direta ao editar.
+- **GlobalBudget:** soft delete (`deleted_at`) desde HF-44 (antes: substituição direta — HF-59). Exclusão disponível apenas na camada de repositório (sem endpoint DELETE); unicidade via índice parcial. Ver ADR-001.
 - **ReductionGoal:** soft delete (`deleted_at`).
