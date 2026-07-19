@@ -1,0 +1,31 @@
+### HF-41 — Saldo mensal (SAL). Base: http://localhost:8081/api/v1
+@base = http://localhost:8081/api/v1
+@user = 00000000-0000-0000-0000-000000000001
+
+### Cenário: saldo completo com teto cadastrado (200) — SAL-01/02/03, ORC-06/07
+# Pré-requisito: receitas na competência + teto (POST /budgets/global) + hf-transaction-service no ar.
+GET {{base}}/balance?user_id={{user}}&competence=2026-07
+
+### Cenário: saldo sem teto cadastrado (200) — ceiling:null, ceiling_usage_pct:null, ceiling_exceeded:false
+GET {{base}}/balance?user_id={{user}}&competence=2099-01
+
+### Cenário: sem receitas na competência (200) — balance_today negativo, SAL-04
+# Use uma competência com despesas e sem receitas.
+GET {{base}}/balance?user_id={{user}}&competence=2026-01
+
+### Cenário: user_id ausente — SAL-01 (400 MISSING_REQUIRED_FIELD)
+GET {{base}}/balance?competence=2026-07
+
+### Cenário: user_id inválido — SAL-01 (400 MISSING_REQUIRED_FIELD)
+GET {{base}}/balance?user_id=not-a-uuid&competence=2026-07
+
+### Cenário: competence fora do formato YYYY-MM — SAL-01 (400 INVALID_COMPETENCE)
+GET {{base}}/balance?user_id={{user}}&competence=2026/07
+
+### Cenário: hf-transaction-service em timeout (503 UPSTREAM_TIMEOUT)
+# Derrube/pause o hf-transaction-service (timeout > 5s) e repita:
+GET {{base}}/balance?user_id={{user}}&competence=2026-07
+
+### Cenário: hf-transaction-service com status inesperado (502 UPSTREAM_ERROR)
+# Aponte TRANSACTION_SERVICE_URL para um serviço que responda 500 e repita:
+GET {{base}}/balance?user_id={{user}}&competence=2026-07

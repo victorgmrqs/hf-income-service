@@ -11,15 +11,17 @@ Toda comunicação é HTTP REST. O cliente HTTP está em `src/pkg/httpclient/cli
 ## Interface do cliente HTTP
 
 ```go
-// src/pkg/httpclient/client.go
+// src/pkg/httpclient/transaction_client.go
 type TransactionClient interface {
     GetExpenseTotals(ctx context.Context, userID, competence string) (*ExpenseTotalsOutput, error)
+    GetAccountsPayable(ctx context.Context, userID, dueDateUntil string) ([]PendingBillOutput, error)
+    GetExpensesByCategory(ctx context.Context, userID, categoryID, competence string) (*ExpensesByCategoryOutput, error)
 }
 ```
 
-Os use cases dependem apenas dessa interface — o cliente HTTP concreto é injetado em `cmd/server/main.go` (`TRANSACTION_SERVICE_URL`). Timeout de 5s.
+Os use cases dependem apenas dessa interface — o cliente HTTP concreto (`NewTransactionClient`) é injetado em `cmd/server/main.go` (`TRANSACTION_SERVICE_URL`). Timeout de **5s por chamada** via `context.WithTimeout`; timeout → `ErrUpstreamTimeout`, status inesperado → `ErrUpstreamError` (HF-57/HF-41).
 
-> `GetPendingBills` (contas a pagar, domínio SAL) será adicionado à interface quando o `/balance` for implementado (HF-41/HF-74).
+> Consolidação (HF-41): o `client.go` genérico do HF-44 foi removido — `transaction_client.go` é o cliente canônico único.
 
 ---
 
@@ -27,7 +29,7 @@ Os use cases dependem apenas dessa interface — o cliente HTTP concreto é inje
 
 **Usado em:**
 - ORC-03/04 (`auto-adjust` e `preview-next` — gasto do mês anterior/corrente) — HF-44
-- SAL-01 (`total_expenses` no response de `/balance`) — planejado
+- SAL-01 (`total_expenses`, `total_personal`, `total_shared` no response de `/balance`) — HF-41
 
 **Contrato:**
 
@@ -65,7 +67,7 @@ balance.total_expenses = total_general
 
 ## Endpoint 2 — Contas a pagar pendentes
 
-**Usado em:** SAL-02 e SAL-03 (`committed_bills` e `projected_balance` no response de `/balance`)
+**Usado em:** SAL-02 e SAL-03 (`committed_bills` e `projected_balance` no response de `/balance`) — HF-41 (`GetAccountsPayable` + `LastDayOfMonth`)
 
 **Contrato:**
 

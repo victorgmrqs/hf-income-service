@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 	"github.com/victorgmrqs/hf-income-service/src/internal/entity"
 )
 
@@ -19,6 +20,8 @@ type IncomeRepository interface {
 	ListRecurrentByCompetence(ctx context.Context, competence string) ([]entity.Income, error)
 	// ExistsByOriginAndCompetence indica se já existe uma cópia propagada (idempotência, REC-04).
 	ExistsByOriginAndCompetence(ctx context.Context, originID uuid.UUID, competence string) (bool, error)
+	// SumByUserAndCompetence agrega o total de receitas ativas da competência (REC-06/SAL-01).
+	SumByUserAndCompetence(ctx context.Context, userID uuid.UUID, competence string) (decimal.Decimal, error)
 }
 
 // GlobalBudgetRepository abstrai o acesso ao teto mensal de gastos (ORC).

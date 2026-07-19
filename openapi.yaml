@@ -321,6 +321,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseBalance'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '502':
+          description: Unexpected response from hf-transaction-service (code UPSTREAM_ERROR)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: hf-transaction-service timeout (code UPSTREAM_TIMEOUT)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   # ─── Reduction Goals ──────────────────────────────────────────────────────
 
@@ -569,19 +583,27 @@ components:
         data: { $ref: '#/components/schemas/AutoAdjustPreview' }
         error: { type: 'null' }
 
+    # Contrato canônico do FDD-004 §5 (HF-41). Campos monetários serializados
+    # como string decimal (ex.: "7500.00"). Substitui o rascunho anterior
+    # (global_ceiling/projected_ceiling_usage_pct não existem no response real).
     Balance:
       type: object
       properties:
+        user_id: { type: string, format: uuid }
         competence: { type: string, pattern: '^\d{4}-\d{2}$' }
-        total_income: { type: number }
-        total_expenses: { type: number }
-        balance_today: { type: number }
-        committed_bills: { type: number }
-        projected_balance: { type: number }
-        global_ceiling: { type: number, nullable: true }
-        ceiling_usage_pct: { type: number, nullable: true }
-        projected_ceiling_usage_pct: { type: number, nullable: true }
+        total_income: { type: string, example: '7500.00' }
+        total_personal: { type: string, example: '1800.00' }
+        total_shared: { type: string, example: '1400.00' }
+        total_expenses: { type: string, example: '3200.00' }
+        balance_today: { type: string, example: '4300.00' }
+        committed_bills: { type: string, example: '850.00' }
+        projected_balance: { type: string, example: '3450.00' }
         is_projected_negative: { type: boolean }
+        ceiling: { type: string, nullable: true, example: '5000.00' }
+        # ORC-07: percentual inteiro (64 = 64%); acima de 100 indica estouro; null sem teto.
+        ceiling_usage_pct: { type: integer, nullable: true, example: 64 }
+        # ORC-06: true quando total_expenses > ceiling; false sem teto.
+        ceiling_exceeded: { type: boolean }
 
     ApiResponseBalance:
       type: object
