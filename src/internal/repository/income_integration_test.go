@@ -196,3 +196,67 @@ func TestIncomeRepository_PropagateIdempotency(t *testing.T) {
 		t.Error("expected unique violation creating duplicate propagated income")
 	}
 }
+
+func TestIncomeRepository_SumByUserAndCompetence(t *testing.T) {
+	db := newTestDB(t)
+	repo := NewIncomeRepository(db)
+	ctx := context.Background()
+	userID := uuid.New()
+
+	// Sem registros → 0 (COALESCE), não erro.
+	sum, err := repo.SumByUserAndCompetence(ctx, userID, "2026-06")
+	if err != nil {
+		t.Fatalf("sum (empty): %v", err)
+	}
+	if !sum.IsZero() {
+		t.Errorf("sum vazio = %s, want 0", sum)
+	}
+
+	seed := []struct {
+		amount     string
+		competence string
+		user       uuid.UUID
+	}{
+		{"5000.00", "2026-06", userID},
+		{"2500.50", "2026-06", userID},
+		{"999.99", "2026-07", userID},     // outra competência — fora da soma
+		{"777.00", "2026-06", uuid.New()}, // outro usuário — fora da soma
+	}
+	var toDelete *entity.Income
+	for i, s := range seed {
+		inc := &entity.Income{
+			UserID:      s.user,
+			Description: "Receita",
+			Amount:      decimal.RequireFromString(s.amount),
+			Date:        time.Now(),
+			Competence:  s.competence,
+			Type:        entity.IncomeTypeSalary,
+		}
+		if err := repo.Create(ctx, inc); err != nil {
+			t.Fatalf("create seed %d: %v", i, err)
+		}
+		if i == 1 {
+			toDelete = inc
+		}
+	}
+
+	sum, err = repo.SumByUserAndCompetence(ctx, userID, "2026-06")
+	if err != nil {
+		t.Fatalf("sum: %v", err)
+	}
+	if !sum.Equal(decimal.RequireFromString("7500.50")) {
+		t.Errorf("sum = %s, want 7500.50", sum)
+	}
+
+	// Soft delete sai da soma (SAL-01 considera apenas receitas ativas).
+	if err := repo.Delete(ctx, toDelete.ID); err != nil {
+		t.Fatalf("delete: %v", err)
+	}
+	sum, err = repo.SumByUserAndCompetence(ctx, userID, "2026-06")
+	if err != nil {
+		t.Fatalf("sum after delete: %v", err)
+	}
+	if !sum.Equal(decimal.RequireFromString("5000.00")) {
+		t.Errorf("sum após soft delete = %s, want 5000.00", sum)
+	}
+}

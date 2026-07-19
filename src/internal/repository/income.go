@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 	"github.com/victorgmrqs/hf-income-service/src/internal/entity"
 	"gorm.io/gorm"
 )
@@ -46,6 +47,22 @@ func (r *incomeRepository) ListByUserAndCompetence(ctx context.Context, userID u
 // são mantidos imutáveis pela camada de use case (REC-03).
 func (r *incomeRepository) Update(ctx context.Context, income *entity.Income) error {
 	return r.db.WithContext(ctx).Save(income).Error
+}
+
+// SumByUserAndCompetence agrega o total de receitas ativas do usuário na
+// competência (REC-06/SAL-01). COALESCE garante 0 quando não há registros;
+// soft delete é respeitado pelo escopo padrão do GORM (Model + Where).
+func (r *incomeRepository) SumByUserAndCompetence(ctx context.Context, userID uuid.UUID, competence string) (decimal.Decimal, error) {
+	var sum decimal.Decimal
+	err := r.db.WithContext(ctx).
+		Model(&entity.Income{}).
+		Where("user_id = ? AND competence = ?", userID, competence).
+		Select("COALESCE(SUM(amount), 0)").
+		Scan(&sum).Error
+	if err != nil {
+		return decimal.Zero, err
+	}
+	return sum, nil
 }
 
 // Delete aplica soft delete (gorm.DeletedAt). Retorna ErrRecordNotFound quando

@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	balancehandler "github.com/victorgmrqs/hf-income-service/src/internal/handler/balance"
 	globalbudgethandler "github.com/victorgmrqs/hf-income-service/src/internal/handler/global_budget"
 	incomehandler "github.com/victorgmrqs/hf-income-service/src/internal/handler/income"
 	"github.com/victorgmrqs/hf-income-service/src/pkg/observability"
@@ -19,6 +20,7 @@ func SetupRouter(
 	metrics *observability.ServiceMetrics,
 	incomeHandler *incomehandler.IncomeHandler,
 	globalBudgetHandler *globalbudgethandler.GlobalBudgetHandler,
+	balanceHandler *balancehandler.BalanceHandler,
 ) *gin.Engine {
 	router := gin.New()
 	router.Use(gin.Recovery())
@@ -50,6 +52,9 @@ func SetupRouter(
 			budgets.POST("/auto-adjust", globalBudgetHandler.AutoAdjust)
 			budgets.PUT("/:id", globalBudgetHandler.Update)
 		}
+
+		// Saldo mensal (SAL) — calculado sob demanda, sem persistência.
+		api.GET("/balance", balanceHandler.Get)
 	}
 
 	return router

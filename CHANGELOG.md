@@ -19,14 +19,18 @@ Cada entrada referencia o ticket Jira (`(HF-XX)`). Datas em `YYYY-MM-DD`.
 - CRUD de Teto Global (ORC): `GlobalBudgetRepository` (implementação GORM), use cases create/get/update e handler em `/api/v1/budgets/global` (`POST`, `GET ?user_id=&competence=`, `PUT /:id`); ORC-01 — unicidade `(user_id, competence)` com `409 BUDGET_ALREADY_EXISTS`, `ceiling > 0` e `competence` `YYYY-MM`; edição manual força `auto_adjusted=false` (ORC-05); `BusinessErrorsTotal{ORC,ORC-01}` nas violações e `AutoMigrate` da tabela `global_budgets`. (HF-43)
 - Auto-ajuste progressivo do teto global (ORC-03/04/05): `POST /api/v1/budgets/global/auto-adjust` (idempotente via upsert) e `GET /api/v1/budgets/global/preview-next` (cálculo sem persistir, `adjustment_reason`); consome o gasto do mês anterior via `httpclient.GetExpenseTotals` (hf-transaction-service) — falha upstream retorna `503 UPSTREAM_UNAVAILABLE` com log ERROR (`trace_id`, `upstream`); sem teto anterior retorna `400 NO_PREVIOUS_BUDGET` (ORC-03); métricas `BusinessErrorsTotal{ORC,ORC-03}` e `{ORC,upstream}`; repositório ganha `ExistsByUserAndCompetence`, `Upsert` e `Delete` (soft). Absorve HF-64/66/67. (HF-44)
 
+- Saldo mensal (SAL): `GET /api/v1/balance?user_id=&competence=` — agrega 4 fontes em paralelo via `errgroup` (receitas e teto locais + `GetExpenseTotals`/`GetAccountsPayable` do hf-transaction-service) sem persistência e sem dados parciais; SAL-01/02/03/04/05 e ORC-06/07 (`ceiling_exceeded`, `ceiling_usage_pct` inteiro, `null` sem teto); `503 UPSTREAM_TIMEOUT` / `502 UPSTREAM_ERROR`; spans OTEL `balance.get` + sub-spans por chamada; `IncomeRepository` ganha `SumByUserAndCompetence` (pendência do HF-60). Absorve HF-72/74. (HF-41)
+
 ### Changed
 - `GlobalBudget` passa a usar soft delete (`deleted_at`) — supersede a decisão "sem soft delete" do HF-59 (ver `docs/adr/ADR-001`); a unicidade ORC-01 agora é índice único **parcial** `(user_id, competence) WHERE deleted_at IS NULL` (`repository.EnsureGlobalBudgetIndexes`), permitindo recriar o teto após exclusão. Timeout do `pkg/httpclient` reduzido de 10s para 5s (INTEGRATIONS.md/FDD-002 §6); contrato do `auto-adjust` no `openapi.yaml` alinhado ao FDD (`competence` de destino, resposta `200`). (HF-44)
 - Reestruturação de pastas: `internal/`, `config/`, `pkg/`, `cmd/` movidos para `src/`; `go.mod`/`go.sum` permanecem na raiz; sem mudança de regra de negócio. (HF-97)
 
 ### Fixed
+- `pkg/httpclient` consolidado: os merges de HF-57 e HF-44 redeclararam `TransactionClient`/`ExpenseTotalsOutput` no mesmo pacote e `development` parou de compilar; o `client.go` do HF-44 foi removido em favor do `transaction_client.go` (cliente canônico), `main.go` migrado para `NewTransactionClient` e `GetExpenseTotals` ganhou guard contra `data:null`. (HF-41)
 - `pkg/observability/tracing.go` reformatado com gofmt. (HF-91)
 
 ### Dependencies
+- `golang.org/x/sync` v0.20.0 promovido de indireto para direto (`errgroup` no use case de saldo). (HF-41)
 - `go mod tidy`: requires indiretos sincronizados no `go.mod` (entradas faltantes de `gin` e transitivos). (HF-91)
 - Adicionados `github.com/spf13/viper`, `gorm.io/gorm`, `gorm.io/driver/postgres`. (HF-56)
 - Adicionados `github.com/shopspring/decimal` (direto) e, para testes de integração, `github.com/testcontainers/testcontainers-go` (+ módulo postgres). (HF-37)

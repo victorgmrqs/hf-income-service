@@ -11,9 +11,11 @@ import (
 	"github.com/victorgmrqs/hf-income-service/src/config"
 	"github.com/victorgmrqs/hf-income-service/src/internal/entity"
 	"github.com/victorgmrqs/hf-income-service/src/internal/handler"
+	balancehandler "github.com/victorgmrqs/hf-income-service/src/internal/handler/balance"
 	globalbudgethandler "github.com/victorgmrqs/hf-income-service/src/internal/handler/global_budget"
 	incomehandler "github.com/victorgmrqs/hf-income-service/src/internal/handler/income"
 	"github.com/victorgmrqs/hf-income-service/src/internal/repository"
+	balanceUseCase "github.com/victorgmrqs/hf-income-service/src/internal/usecase/balance"
 	budgetUseCase "github.com/victorgmrqs/hf-income-service/src/internal/usecase/global_budget"
 	incomeUseCase "github.com/victorgmrqs/hf-income-service/src/internal/usecase/income"
 	"github.com/victorgmrqs/hf-income-service/src/pkg/database"
@@ -63,7 +65,7 @@ func main() {
 
 	// Wiring ORC: repository + httpclient -> use cases -> handler.
 	// O auto-ajuste (ORC-03/04) consome o hf-transaction-service via TransactionClient.
-	txClient := httpclient.NewClient(cfg.Transaction.URL)
+	txClient := httpclient.NewTransactionClient(cfg.Transaction.URL, nil)
 	globalBudgetRepo := repository.NewGlobalBudgetRepository(db)
 	globalBudgetHandler := globalbudgethandler.NewGlobalBudgetHandler(
 		budgetUseCase.NewCreateUseCase(globalBudgetRepo, logger),
@@ -71,6 +73,13 @@ func main() {
 		budgetUseCase.NewUpdateUseCase(globalBudgetRepo, logger),
 		budgetUseCase.NewAutoAdjustUseCase(globalBudgetRepo, txClient, logger),
 		budgetUseCase.NewPreviewNextUseCase(globalBudgetRepo, txClient, logger),
+		metrics,
+	)
+
+	// Wiring SAL: repositórios locais + httpclient -> use case -> handler.
+	// Saldo é calculado sob demanda — não há repositório próprio.
+	balanceHandler := balancehandler.NewBalanceHandler(
+		balanceUseCase.NewGetUseCase(incomeRepo, globalBudgetRepo, txClient, logger),
 		metrics,
 	)
 
@@ -85,7 +94,7 @@ func main() {
 		}
 	}()
 
-	router := handler.SetupRouter(logger, metrics, incomeHandler, globalBudgetHandler)
+	router := handler.SetupRouter(logger, metrics, incomeHandler, globalBudgetHandler, balanceHandler)
 	logger.Info("server listening", slog.String("port", cfg.Server.Port))
 	if err := router.Run(":" + cfg.Server.Port); err != nil {
 		log.Fatalf("failed to start server: %v", err)

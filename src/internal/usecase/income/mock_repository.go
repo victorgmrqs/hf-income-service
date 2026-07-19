@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 
 	"github.com/victorgmrqs/hf-income-service/src/internal/entity"
 	"github.com/victorgmrqs/hf-income-service/src/internal/repository"
@@ -20,6 +21,7 @@ type mockIncomeRepository struct {
 
 	ListRecurrentFn func(ctx context.Context, competence string) ([]entity.Income, error)
 	ExistsFn        func(ctx context.Context, originID uuid.UUID, competence string) (bool, error)
+	SumFn           func(ctx context.Context, userID uuid.UUID, competence string) (decimal.Decimal, error)
 }
 
 var _ repository.IncomeRepository = (*mockIncomeRepository)(nil)
@@ -50,4 +52,8 @@ func (m *mockIncomeRepository) ListRecurrentByCompetence(ctx context.Context, co
 
 func (m *mockIncomeRepository) ExistsByOriginAndCompetence(ctx context.Context, originID uuid.UUID, competence string) (bool, error) {
 	return m.ExistsFn(ctx, originID, competence)
+}
+
+func (m *mockIncomeRepository) SumByUserAndCompetence(ctx context.Context, userID uuid.UUID, competence string) (decimal.Decimal, error) {
+	return m.SumFn(ctx, userID, competence)
 }

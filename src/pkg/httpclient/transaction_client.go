@@ -115,6 +115,9 @@ func (c *transactionClient) GetExpenseTotals(ctx context.Context, userID, compet
 	if err := c.get(ctx, path, &env); err != nil {
 		return nil, err
 	}
+	if env.Data == nil {
+		return nil, fmt.Errorf("%w: empty data for expense totals", ErrUpstreamError)
+	}
 	return env.Data, nil
 }
 
