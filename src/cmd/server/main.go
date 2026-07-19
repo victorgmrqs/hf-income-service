@@ -63,7 +63,7 @@ func main() {
 
 	// Wiring ORC: repository + httpclient -> use cases -> handler.
 	// O auto-ajuste (ORC-03/04) consome o hf-transaction-service via TransactionClient.
-	txClient := httpclient.NewClient(cfg.Transaction.URL)
+	txClient := httpclient.NewTransactionClient(cfg.Transaction.URL, nil)
 	globalBudgetRepo := repository.NewGlobalBudgetRepository(db)
 	globalBudgetHandler := globalbudgethandler.NewGlobalBudgetHandler(
 		budgetUseCase.NewCreateUseCase(globalBudgetRepo, logger),
