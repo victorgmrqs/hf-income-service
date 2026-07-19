@@ -100,6 +100,22 @@ func (r *globalBudgetRepository) Upsert(ctx context.Context, budget *entity.Glob
 	return nil
 }
 
+// ListUserIDsByCompetence retorna os user_ids distintos com teto ativo na
+// competência — elegíveis ao auto-ajuste do mês seguinte (ORC-05, HF-38).
+// Soft-deletados ficam de fora pelo escopo padrão do GORM.
+func (r *globalBudgetRepository) ListUserIDsByCompetence(ctx context.Context, competence string) ([]uuid.UUID, error) {
+	var userIDs []uuid.UUID
+	err := r.db.WithContext(ctx).
+		Model(&entity.GlobalBudget{}).
+		Where("competence = ?", competence).
+		Distinct().
+		Pluck("user_id", &userIDs).Error
+	if err != nil {
+		return nil, err
+	}
+	return userIDs, nil
+}
+
 // Delete aplica soft delete (gorm.DeletedAt). Retorna ErrRecordNotFound quando
 // nenhum registro ativo é afetado.
 func (r *globalBudgetRepository) Delete(ctx context.Context, id uuid.UUID) error {

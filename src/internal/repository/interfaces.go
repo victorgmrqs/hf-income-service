@@ -40,6 +40,9 @@ type GlobalBudgetRepository interface {
 	Upsert(ctx context.Context, budget *entity.GlobalBudget) error
 	// Delete aplica soft delete (gorm.DeletedAt).
 	Delete(ctx context.Context, id uuid.UUID) error
+	// ListUserIDsByCompetence retorna os usuários com teto ativo na competência —
+	// elegíveis ao auto-ajuste do mês seguinte (ORC-05, scheduler HF-38).
+	ListUserIDsByCompetence(ctx context.Context, competence string) ([]uuid.UUID, error)
 }
 
 // ReductionGoalRepository abstrai o acesso a metas de redução por categoria (MET).

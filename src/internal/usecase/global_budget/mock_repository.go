@@ -19,6 +19,7 @@ type mockGlobalBudgetRepository struct {
 	ExistsFn                 func(ctx context.Context, userID uuid.UUID, competence string) (bool, error)
 	UpsertFn                 func(ctx context.Context, budget *entity.GlobalBudget) error
 	DeleteFn                 func(ctx context.Context, id uuid.UUID) error
+	ListUserIDsFn            func(ctx context.Context, competence string) ([]uuid.UUID, error)
 }
 
 var _ repository.GlobalBudgetRepository = (*mockGlobalBudgetRepository)(nil)
@@ -49,4 +50,8 @@ func (m *mockGlobalBudgetRepository) Upsert(ctx context.Context, budget *entity.
 
 func (m *mockGlobalBudgetRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return m.DeleteFn(ctx, id)
+}
+
+func (m *mockGlobalBudgetRepository) ListUserIDsByCompetence(ctx context.Context, competence string) ([]uuid.UUID, error) {
+	return m.ListUserIDsFn(ctx, competence)
 }

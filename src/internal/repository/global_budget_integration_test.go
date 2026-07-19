@@ -285,3 +285,62 @@ func TestGlobalBudgetRepository_SoftDelete_HiddenAndRecreatable(t *testing.T) {
 		t.Errorf("delete deleted: err = %v, want ErrRecordNotFound", err)
 	}
 }
+
+func TestGlobalBudgetRepository_ListUserIDsByCompetence(t *testing.T) {
+	db := newGlobalBudgetTestDB(t)
+	repo := NewGlobalBudgetRepository(db)
+	ctx := context.Background()
+	userA, userB, userC := uuid.New(), uuid.New(), uuid.New()
+
+	// Sem registros → lista vazia, sem erro.
+	ids, err := repo.ListUserIDsByCompetence(ctx, "2026-06")
+	if err != nil {
+		t.Fatalf("list (empty): %v", err)
+	}
+	if len(ids) != 0 {
+		t.Errorf("lista vazia esperada, veio %d ids", len(ids))
+	}
+
+	seed := []struct {
+		user       uuid.UUID
+		competence string
+	}{
+		{userA, "2026-06"},
+		{userB, "2026-06"},
+		{userC, "2026-07"}, // outra competência — fora
+	}
+	var toDelete *entity.GlobalBudget
+	for i, s := range seed {
+		b := &entity.GlobalBudget{
+			UserID:     s.user,
+			Competence: s.competence,
+			Ceiling:    decimal.RequireFromString("1000.00"),
+		}
+		if err := repo.Create(ctx, b); err != nil {
+			t.Fatalf("create seed %d: %v", i, err)
+		}
+		if s.user == userB {
+			toDelete = b
+		}
+	}
+
+	ids, err = repo.ListUserIDsByCompetence(ctx, "2026-06")
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(ids) != 2 {
+		t.Fatalf("ids = %d, want 2 (userA e userB)", len(ids))
+	}
+
+	// Soft delete sai da listagem (ORC-05: só tetos ativos são base de ajuste).
+	if err := repo.Delete(ctx, toDelete.ID); err != nil {
+		t.Fatalf("delete: %v", err)
+	}
+	ids, err = repo.ListUserIDsByCompetence(ctx, "2026-06")
+	if err != nil {
+		t.Fatalf("list after delete: %v", err)
+	}
+	if len(ids) != 1 || ids[0] != userA {
+		t.Errorf("ids após soft delete = %v, want apenas %s", ids, userA)
+	}
+}
