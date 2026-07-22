@@ -1,0 +1,117 @@
+# dev-workflow — configuração por projeto
+# Gerado por /setup-project em 2026-07-22. Este arquivo é a ÚNICA fonte de parâmetros
+# das skills /task, /code-review-task e /docs-sync.
+
+schema_version: 1
+
+platforms:
+  - claude-code
+  - antigravity
+
+project:
+  name: hf-income-service
+  language: pt-BR
+  repo_role: api                 # parte do ecossistema Home Finance (hf-transaction-service, futuro hf-auth-service)
+  canonical_docs_path: "."
+
+tracker:
+  provider: jira
+  mcp_server: claude_ai_Atlassian_Rovo   # MCP_DOCKER cai com frequência neste ambiente ("connection closed")
+  project_key: HF
+  cloud_id: a5d8b89b-37c5-4fd9-b536-5c5f662822fe
+  url: https://goncalvesmarques.atlassian.net
+  ticket_prefix_guard: "[frontend]"      # tickets [frontend] pertencem ao repo hf-frontend
+  columns:
+    todo: "To Do"
+    in_progress: "In Progress"
+    in_review: "In Review"
+    done: "Done"
+
+git:
+  base_branch: development
+  branch_pattern: "feat/{ticket}-{slug}"   # bugfixes usam fix/{ticket}-{slug} manualmente — schema não tem token {type}
+  commit_pattern: "{type}({ticket}): {message}"
+
+commands:
+  lint: "gofmt -l . && go vet ./... && golangci-lint run"
+  typecheck: ""                  # Go não tem etapa de typecheck separada de build
+  test: "go test ./..."
+  coverage: "go test -cover ./..."
+  build: "go build ./src/cmd/server"
+  e2e: ""
+
+quality_gates:
+  review_pack: generic            # não há pack específico para Go
+  coverage_threshold: null        # nenhum threshold definido em docs/requirements.md (RNF)
+  coverage_strict_paths: {}
+
+domains:
+  - prefix: REC
+    fdd: "docs/fdds/fdd-001-rec.md"
+  - prefix: ORC
+    fdd: "docs/fdds/fdd-002-orc.md"
+  - prefix: MET
+    fdd: "docs/fdds/fdd-003-met.md"
+  - prefix: SAL
+    fdd: "docs/fdds/fdd-004-sal.md"
+
+context_files:
+  - CLAUDE.md
+  - docs/workflow.md
+  - docs/observability.md
+
+docs_map:
+  - if_diff_touches: "src/internal/**"
+    update: ["CHANGELOG.md"]
+    severity: blocker
+  - if_diff_touches: "go.mod"
+    update: ["CHANGELOG.md"]
+    severity: blocker
+  - if_diff_touches: "src/internal/handler/**"
+    update: ["openapi.yaml"]
+    severity: warn
+  - if_diff_touches: "src/pkg/httpclient/**"
+    update: ["INTEGRATIONS.md"]
+    severity: warn
+  - if_diff_touches: "src/internal/entity/**"
+    update: ["ENTITIES.md"]
+    severity: warn
+
+documentation_policy:
+  changelog:
+    required_for_every_task: true
+    path: CHANGELOG.md
+    section: Unreleased
+    require_ticket_link: true
+    allowed_categories: [Added, Changed, Fixed, Security, Deprecated, Removed, Maintenance]
+  technical:
+    source_of_truth: repository
+    paths: [README.md, docs/, AGENTS.md, CLAUDE.md, API_SPEC.md, ARCHITECTURE.md, ENTITIES.md, INTEGRATIONS.md, openapi.yaml]
+  functional:
+    source_of_truth: confluence
+  delivery_log:
+    required_for_every_task: true
+    page_title: "Histórico de entregas"
+    page_id: "19922945"
+
+evidence:
+  type: http
+  path: "docs/http/{domain}/"
+
+confluence:
+  enabled: true
+  mcp_server: claude_ai_Atlassian_Rovo
+  space: "HF"                     # space "Home Finance", id 19857412
+  business_docs: []                # TODO: preencher quando as regras (hoje no Notion) forem migradas para o Confluence
+
+dod_extra:
+  - "[ ] ID de regra referenciado em comentário Go (// DOMAIN-XX) acima de cada erro/validação de regra de negócio"
+  - "[ ] Use case novo loga INFO na entrada (operation, user_id, competence) e na saída (duration_ms)"
+  - "[ ] Violação de regra de negócio loga WARN com rule_id; erro que chega ao handler loga ERROR com trace_id"
+  - "[ ] BusinessErrorsTotal{domain, rule_id} incrementado em cada erro de regra de negócio"
+  - "[ ] Nenhum dado sensível em log (senha, token, API key, connection string, request/response body, Authorization, OTEL_EXPORTER_OTLP_HEADERS)"
+
+integrations:
+  atlassian:
+    capability_discovery: true
+    fallback: local
