@@ -54,6 +54,10 @@ func newEntityTestDB(t *testing.T) *gorm.DB {
 	if err := repository.EnsureGlobalBudgetIndexes(db); err != nil {
 		t.Fatalf("ensure global budget indexes: %v", err)
 	}
+	// MET-04 (HF-68): idem para ReductionGoal — índice único PARCIAL fora do AutoMigrate.
+	if err := repository.EnsureReductionGoalIndexes(db); err != nil {
+		t.Fatalf("ensure reduction goal indexes: %v", err)
+	}
 	return db
 }
 
