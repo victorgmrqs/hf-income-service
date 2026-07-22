@@ -5,6 +5,9 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
@@ -15,6 +18,7 @@ import (
 	globalbudgethandler "github.com/victorgmrqs/hf-income-service/src/internal/handler/global_budget"
 	incomehandler "github.com/victorgmrqs/hf-income-service/src/internal/handler/income"
 	"github.com/victorgmrqs/hf-income-service/src/internal/repository"
+	"github.com/victorgmrqs/hf-income-service/src/internal/scheduler"
 	balanceUseCase "github.com/victorgmrqs/hf-income-service/src/internal/usecase/balance"
 	budgetUseCase "github.com/victorgmrqs/hf-income-service/src/internal/usecase/global_budget"
 	incomeUseCase "github.com/victorgmrqs/hf-income-service/src/internal/usecase/income"
@@ -24,6 +28,10 @@ import (
 )
 
 func main() {
+	// Cancelado em SIGINT/SIGTERM — encerra graciosamente as goroutines (scheduler).
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatalf("failed to load configuration: %v", err)
@@ -52,29 +60,39 @@ func main() {
 	logger.Info("database connected and migrated")
 
 	// Wiring REC: repository -> use cases -> handler.
+	// propagateUC é compartilhado com o scheduler (job mensal REC-04).
 	incomeRepo := repository.NewIncomeRepository(db)
+	propagateUC := incomeUseCase.NewPropagateUseCase(incomeRepo, logger)
 	incomeHandler := incomehandler.NewIncomeHandler(
 		incomeUseCase.NewCreateUseCase(incomeRepo, logger),
 		incomeUseCase.NewGetUseCase(incomeRepo, logger),
 		incomeUseCase.NewListUseCase(incomeRepo, logger),
 		incomeUseCase.NewUpdateUseCase(incomeRepo, logger),
 		incomeUseCase.NewDeleteUseCase(incomeRepo, logger),
-		incomeUseCase.NewPropagateUseCase(incomeRepo, logger),
+		propagateUC,
 		metrics,
 	)
 
 	// Wiring ORC: repository + httpclient -> use cases -> handler.
-	// O auto-ajuste (ORC-03/04) consome o hf-transaction-service via TransactionClient.
+	// O auto-ajuste (ORC-03/04) consome o hf-transaction-service via TransactionClient;
+	// autoAdjustUC é compartilhado com o scheduler (job mensal ORC-05).
 	txClient := httpclient.NewTransactionClient(cfg.Transaction.URL, nil)
 	globalBudgetRepo := repository.NewGlobalBudgetRepository(db)
+	autoAdjustUC := budgetUseCase.NewAutoAdjustUseCase(globalBudgetRepo, txClient, logger)
 	globalBudgetHandler := globalbudgethandler.NewGlobalBudgetHandler(
 		budgetUseCase.NewCreateUseCase(globalBudgetRepo, logger),
 		budgetUseCase.NewGetUseCase(globalBudgetRepo, logger),
 		budgetUseCase.NewUpdateUseCase(globalBudgetRepo, logger),
-		budgetUseCase.NewAutoAdjustUseCase(globalBudgetRepo, txClient, logger),
+		autoAdjustUC,
 		budgetUseCase.NewPreviewNextUseCase(globalBudgetRepo, txClient, logger),
 		metrics,
 	)
+
+	// Scheduler interno (HF-38): dispara propagate + auto-adjust no 1º dia do mês.
+	// Run retorna imediatamente quando SCHEDULER_ENABLED=false.
+	sched := scheduler.New(propagateUC, autoAdjustUC, globalBudgetRepo, logger,
+		cfg.Scheduler.Enabled, cfg.Scheduler.TZ)
+	go sched.Run(ctx)
 
 	// Wiring SAL: repositórios locais + httpclient -> use case -> handler.
 	// Saldo é calculado sob demanda — não há repositório próprio.

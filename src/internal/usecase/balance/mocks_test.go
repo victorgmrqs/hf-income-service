@@ -69,6 +69,9 @@ func (s *stubBudgetRepo) Upsert(context.Context, *entity.GlobalBudget) error {
 	panic("unexpected Upsert")
 }
 func (s *stubBudgetRepo) Delete(context.Context, uuid.UUID) error { panic("unexpected Delete") }
+func (s *stubBudgetRepo) ListUserIDsByCompetence(context.Context, string) ([]uuid.UUID, error) {
+	panic("unexpected ListUserIDs")
+}
 
 // stubTxClient implementa httpclient.TransactionClient; o balance usa
 // GetExpenseTotals e GetAccountsPayable.

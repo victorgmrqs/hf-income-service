@@ -41,3 +41,4 @@ bin/
 
 # /task workflow brief (não versionado)
 task-brief.yaml
+.dev-workflow/state/

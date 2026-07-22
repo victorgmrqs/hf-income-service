@@ -14,6 +14,14 @@ type Config struct {
 	Database      DatabaseConfig
 	Transaction   TransactionConfig
 	Observability ObservabilityConfig
+	Scheduler     SchedulerConfig
+}
+
+// SchedulerConfig controla o disparo interno dos jobs mensais (HF-38):
+// propagação de receitas recorrentes (REC-04) e auto-ajuste do teto (ORC-05).
+type SchedulerConfig struct {
+	Enabled bool
+	TZ      string // timezone da virada de mês (ex.: America/Sao_Paulo)
 }
 
 type ServerConfig struct {
@@ -59,6 +67,8 @@ func Load() (*Config, error) {
 	viper.SetDefault("TRANSACTION_SERVICE_URL", "http://localhost:8080")
 	viper.SetDefault("OTEL_SERVICE_NAME", "hf-income-service")
 	viper.SetDefault("OTEL_SAMPLING_RATIO", 1.0)
+	viper.SetDefault("SCHEDULER_ENABLED", true)
+	viper.SetDefault("SCHEDULER_TZ", "America/Sao_Paulo")
 
 	if err := viper.ReadInConfig(); err != nil {
 		var notFound viper.ConfigFileNotFoundError
@@ -88,6 +98,10 @@ func Load() (*Config, error) {
 			SamplingRatio: viper.GetFloat64("OTEL_SAMPLING_RATIO"),
 			OTLPEndpoint:  viper.GetString("OTEL_EXPORTER_OTLP_ENDPOINT"),
 			OTLPHeaders:   viper.GetString("OTEL_EXPORTER_OTLP_HEADERS"),
+		},
+		Scheduler: SchedulerConfig{
+			Enabled: viper.GetBool("SCHEDULER_ENABLED"),
+			TZ:      viper.GetString("SCHEDULER_TZ"),
 		},
 	}, nil
 }

@@ -84,6 +84,18 @@ func main() {
 - Violações de regras de negócio: `metrics.BusinessErrorsTotal.WithLabelValues("REC", "REC-02").Inc()`
 - Eventos importantes: `logger.InfoContext(ctx, "income propagated", slog.Int("count", n))`
 
+### Scheduler interno (`src/internal/scheduler`, HF-38)
+Goroutine em background, sem request HTTP associado — não passa pelo `RequestMiddleware`, então não há `trace_id` de request; os logs de erro/warn seguem a mesma convenção usando o `trace_id` do contexto quando presente (vazio em execução de background pura).
+
+| Momento | Nível | Campos |
+|---------|-------|--------|
+| Boot da goroutine | INFO | `tz`, `interval` |
+| Início do ciclo mensal | INFO | `operation="scheduler.monthly_jobs"`, `competence` |
+| Falha de job/usuário (propagate ou auto_adjust) | ERROR | `trace_id`, `competence` (e `user_id` no auto_adjust), `error` — não aborta o ciclo |
+| Fim do ciclo mensal | INFO | `operation`, `duration_ms`, `competence`, `propagated`, `adjusted`, `failed` |
+| `SCHEDULER_TZ` inválida | WARN | `tz`, `error` — cai para UTC, não derruba o boot |
+| `SCHEDULER_ENABLED=false` | INFO | goroutine retorna sem disparar nenhum job |
+
 ---
 
 ## Política de dados sensíveis
