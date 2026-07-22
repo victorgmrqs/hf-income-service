@@ -46,11 +46,23 @@ type GlobalBudgetRepository interface {
 }
 
 // ReductionGoalRepository abstrai o acesso a metas de redução por categoria (MET).
-// MET-04: unicidade (user_id, category_id, competence) é garantida na entidade; soft delete.
+// MET-04: unicidade (user_id, category_id, competence) é garantida por índice único
+// parcial (WHERE deleted_at IS NULL — ver EnsureReductionGoalIndexes); soft delete.
 type ReductionGoalRepository interface {
 	Create(ctx context.Context, goal *entity.ReductionGoal) error
 	GetByID(ctx context.Context, id uuid.UUID) (*entity.ReductionGoal, error)
 	ListByUserAndCompetence(ctx context.Context, userID uuid.UUID, competence string) ([]entity.ReductionGoal, error)
 	Update(ctx context.Context, goal *entity.ReductionGoal) error
 	Delete(ctx context.Context, id uuid.UUID) error
+
+	// ExistsByUserCategoryAndCompetence indica se já existe meta ativa para o trio (MET-04).
+	ExistsByUserCategoryAndCompetence(ctx context.Context, userID, categoryID uuid.UUID, competence string) (bool, error)
+	// ListWithNullAchievedByCompetence retorna as metas da competência ainda não fechadas
+	// (achieved IS NULL) — usado pelo job de fechamento do mês (MET-06).
+	ListWithNullAchievedByCompetence(ctx context.Context, competence string) ([]entity.ReductionGoal, error)
+	// UpdatePreviousAmount preenche o snapshot do gasto do mês anterior quando obtido
+	// retroativamente no comparativo (FDD-003 §4).
+	UpdatePreviousAmount(ctx context.Context, id uuid.UUID, previousAmount decimal.Decimal) error
+	// SetAchieved aplica o resultado do fechamento do mês (MET-06).
+	SetAchieved(ctx context.Context, id uuid.UUID, achieved bool) error
 }

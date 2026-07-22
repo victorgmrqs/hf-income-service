@@ -87,8 +87,8 @@ Income
 - Combinação `(user_id, category_id, competence)` deve ser única (uma meta por categoria por mês)
 
 **Índices:**
-- `(user_id, competence)` — listagem por mês
-- `(user_id, category_id, competence)` UNIQUE
+- `(user_id, competence)` **parcial** (`WHERE deleted_at IS NULL`) — listagem por mês
+- `(user_id, category_id, competence)` UNIQUE **parcial** (`WHERE deleted_at IS NULL`) — criados por `repository.EnsureReductionGoalIndexes` fora do AutoMigrate (a tag do GORM não expressa índice parcial; mesmo padrão do ADR-001/`EnsureGlobalBudgetIndexes`), permitindo recriar a meta da combinação após soft delete (HF-68)
 
 ---
 
