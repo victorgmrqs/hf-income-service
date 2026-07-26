@@ -121,26 +121,31 @@ balance.projected_balance = balance.balance_today - balance.committed_bills
 
 ---
 
-## Endpoint 3 — Despesas por categoria (placeholder MET)
+## Endpoint 3 — Totais de despesa por categoria (MET)
 
-**Usado em:** MET (domínio de metas de redução — não implementado ainda)
+**Usado em:** MET — snapshot de `previous_amount` na criação da meta, comparativo mensal e fechamento do mês (`GetExpensesByCategory`).
 
-**Contrato (provisório):**
+**Contrato (real, CAL-05 do hf-transaction-service):**
 
 ```
-GET /api/v1/expenses/user/{user_id}/by-category?category_id={uuid}&competence=YYYY-MM
+GET /api/v1/expenses/totals/by-category?user_id={uuid}&competence=YYYY-MM
 ```
 
 **Response (200):**
 
 ```json
 {
-  "data": { "category_id": "uuid", "total": 500.00 },
+  "data": [
+    { "category_id": "uuid", "category_name": "Alimentação", "total": "500.00", "percentage": "62.50" }
+  ],
   "error": null
 }
 ```
 
-> Contrato sujeito a revisão quando fdd-003-met.md definir o uso completo. (HF-57)
+> Não existe endpoint de categoria única no hf-transaction-service; o client filtra
+> a categoria na resposta. Categoria ausente da lista = sem despesas na competência
+> → total zero (não é erro). Corrigido no HF-70 — o contrato provisório do HF-57
+> (`/expenses/user/{id}/by-category`) apontava para uma rota inexistente.
 
 ---
 

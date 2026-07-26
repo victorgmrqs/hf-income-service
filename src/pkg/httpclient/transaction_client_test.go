@@ -116,9 +116,16 @@ func TestGetAccountsPayable_Success(t *testing.T) {
 }
 
 func TestGetExpensesByCategory_Success(t *testing.T) {
-	srv := httptest.NewServer(jsonHandler(http.StatusOK, map[string]any{
-		"data":  map[string]any{"category_id": "cat-1", "total": 500.00},
-		"error": nil,
+	var gotPath string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path + "?" + r.URL.RawQuery
+		w.Header().Set("Content-Type", "application/json")
+		// Shape real de GET /expenses/totals/by-category (CAL-05): lista com
+		// category_name e valores decimais serializados como string.
+		_, _ = w.Write([]byte(`{"data":[
+			{"category_id":"cat-1","category_name":"Alimentação","total":"500.00","percentage":"62.50"},
+			{"category_id":"cat-2","category_name":"Transporte","total":"300.00","percentage":"37.50"}
+		],"error":null}`))
 	}))
 	defer srv.Close()
 
@@ -127,15 +134,41 @@ func TestGetExpensesByCategory_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+	wantPath := "/api/v1/expenses/totals/by-category?user_id=user-1&competence=2026-06"
+	if gotPath != wantPath {
+		t.Errorf("path = %q, want %q", gotPath, wantPath)
+	}
 	if out == nil {
 		t.Fatal("expected non-nil output")
 	}
 	if out.CategoryID != "cat-1" {
 		t.Errorf("category_id = %q, want %q", out.CategoryID, "cat-1")
 	}
-	wantTotal := "500"
-	if out.Total.String() != wantTotal {
-		t.Errorf("total = %s, want %s", out.Total, wantTotal)
+	if out.CategoryName != "Alimentação" {
+		t.Errorf("category_name = %q, want %q", out.CategoryName, "Alimentação")
+	}
+	if out.Total.String() != "500" {
+		t.Errorf("total = %s, want 500", out.Total)
+	}
+}
+
+func TestGetExpensesByCategory_CategoryWithoutExpenses_ReturnsZero(t *testing.T) {
+	srv := httptest.NewServer(jsonHandler(http.StatusOK, map[string]any{
+		"data":  []any{},
+		"error": nil,
+	}))
+	defer srv.Close()
+
+	client := httpclient.NewTransactionClient(srv.URL, srv.Client())
+	out, err := client.GetExpensesByCategory(context.Background(), "user-1", "cat-9", "2026-06")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if out == nil || !out.Total.IsZero() {
+		t.Fatalf("out = %+v, want total zero para categoria sem despesas", out)
+	}
+	if out.CategoryID != "cat-9" {
+		t.Errorf("category_id = %q, want %q", out.CategoryID, "cat-9")
 	}
 }
 

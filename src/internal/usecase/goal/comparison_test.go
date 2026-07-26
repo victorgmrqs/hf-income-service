@@ -35,7 +35,7 @@ func TestGoalComparison_Success(t *testing.T) {
 	}
 	client := &mockTransactionClient{
 		GetExpensesByCategoryFn: func(context.Context, string, string, string) (*httpclient.ExpensesByCategoryOutput, error) {
-			return &httpclient.ExpensesByCategoryOutput{CategoryID: categoryID.String(), Total: decimal.RequireFromString("620.00")}, nil
+			return &httpclient.ExpensesByCategoryOutput{CategoryID: categoryID.String(), CategoryName: "Alimentação", Total: decimal.RequireFromString("620.00")}, nil
 		},
 	}
 	uc := NewComparisonUseCase(repo, client, testLogger())
@@ -51,8 +51,8 @@ func TestGoalComparison_Success(t *testing.T) {
 	if it.CategoryID != categoryID {
 		t.Errorf("category_id = %s, want %s", it.CategoryID, categoryID)
 	}
-	if it.CategoryName != nil {
-		t.Errorf("category_name = %v, want nil", *it.CategoryName)
+	if it.CategoryName == nil || *it.CategoryName != "Alimentação" {
+		t.Errorf("category_name = %v, want Alimentação (CAL-05)", it.CategoryName)
 	}
 	if it.CurrentMonthAmount == nil || !it.CurrentMonthAmount.Equal(decimal.RequireFromString("620.00")) {
 		t.Errorf("current_month_amount = %v, want 620.00", it.CurrentMonthAmount)

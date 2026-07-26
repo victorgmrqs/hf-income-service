@@ -82,9 +82,9 @@ func (uc *comparisonUseCase) Execute(ctx context.Context, input ComparisonInput)
 	return items, nil
 }
 
-// buildItem calcula a linha do comparativo de uma meta. CategoryName permanece
-// null: o endpoint consumido do hf-transaction-service retorna apenas
-// category_id e total — o frontend resolve o nome pelo id.
+// buildItem calcula a linha do comparativo de uma meta. CategoryName vem do
+// hf-transaction-service (CAL-05) e fica null quando a categoria não tem
+// despesas na competência ou o upstream está indisponível.
 func (uc *comparisonUseCase) buildItem(ctx context.Context, competence string, goal *entity.ReductionGoal) ComparisonItemOutput {
 	item := ComparisonItemOutput{
 		CategoryID:          goal.CategoryID,
@@ -92,7 +92,12 @@ func (uc *comparisonUseCase) buildItem(ctx context.Context, competence string, g
 		TargetAmount:        goal.TargetAmount,
 	}
 
-	item.CurrentMonthAmount = uc.fetchCategoryTotal(ctx, goal, competence)
+	if result := uc.fetchCategoryTotal(ctx, goal, competence); result != nil {
+		item.CurrentMonthAmount = &result.Total
+		if result.CategoryName != "" {
+			item.CategoryName = &result.CategoryName
+		}
+	}
 
 	// FDD-003 §4 (passo 5): snapshot ausente é preenchido retroativamente.
 	if goal.PreviousAmount == nil {
@@ -123,7 +128,7 @@ func (uc *comparisonUseCase) buildItem(ctx context.Context, competence string, g
 
 // fetchCategoryTotal busca o gasto atual da categoria; falha degrada para nil
 // com log WARN (FDD-003 §7).
-func (uc *comparisonUseCase) fetchCategoryTotal(ctx context.Context, goal *entity.ReductionGoal, competence string) *decimal.Decimal {
+func (uc *comparisonUseCase) fetchCategoryTotal(ctx context.Context, goal *entity.ReductionGoal, competence string) *httpclient.ExpensesByCategoryOutput {
 	result, err := uc.client.GetExpensesByCategory(ctx, goal.UserID.String(), goal.CategoryID.String(), competence)
 	if err != nil || result == nil {
 		reason := "upstream returned no data"
@@ -140,7 +145,7 @@ func (uc *comparisonUseCase) fetchCategoryTotal(ctx context.Context, goal *entit
 		)
 		return nil
 	}
-	return &result.Total
+	return result
 }
 
 // backfillPreviousAmount tenta preencher o snapshot do mês anterior quando ele

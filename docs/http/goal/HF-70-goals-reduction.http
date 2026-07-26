@@ -1,0 +1,116 @@
+### HF-70 — Metas de redução: CRUD + comparativo + fechamento (MET-04/05/06/07). Base: http://localhost:8081/api/v1
+@base = http://localhost:8081/api/v1
+@user = 00000000-0000-0000-0000-000000000001
+@category = 00000000-0000-0000-0000-0000000000c1
+
+### Cenário: criar meta (201) — snapshot previous_amount capturado do hf-transaction-service; null se upstream fora (MET-04)
+POST {{base}}/goals/reduction
+Content-Type: application/json
+
+{
+  "user_id": "{{user}}",
+  "category_id": "{{category}}",
+  "competence": "2026-07",
+  "target_amount": "400.00"
+}
+
+### Cenário: meta duplicada para (user, categoria, competência) — MET-04 (409 GOAL_ALREADY_EXISTS)
+POST {{base}}/goals/reduction
+Content-Type: application/json
+
+{
+  "user_id": "{{user}}",
+  "category_id": "{{category}}",
+  "competence": "2026-07",
+  "target_amount": "300.00"
+}
+
+### Cenário: body sem campos obrigatórios (400 VALIDATION_ERROR)
+POST {{base}}/goals/reduction
+Content-Type: application/json
+
+{
+  "user_id": "{{user}}"
+}
+
+### Cenário: user_id inválido (400 INVALID_USER_ID)
+POST {{base}}/goals/reduction
+Content-Type: application/json
+
+{
+  "user_id": "not-a-uuid",
+  "category_id": "{{category}}",
+  "competence": "2026-07",
+  "target_amount": "400.00"
+}
+
+### Cenário: target_amount ≤ 0 — MET-04 (400 INVALID_TARGET_AMOUNT)
+POST {{base}}/goals/reduction
+Content-Type: application/json
+
+{
+  "user_id": "{{user}}",
+  "category_id": "{{category}}",
+  "competence": "2026-07",
+  "target_amount": "-10.00"
+}
+
+### Cenário: competência fora de YYYY-MM — MET-04 (400 INVALID_COMPETENCE)
+POST {{base}}/goals/reduction
+Content-Type: application/json
+
+{
+  "user_id": "{{user}}",
+  "category_id": "{{category}}",
+  "competence": "07/2026",
+  "target_amount": "400.00"
+}
+
+### Cenário: listar metas da competência (200; [] sem metas)
+GET {{base}}/goals/reduction?user_id={{user}}&competence=2026-07
+
+### Cenário: listar com user_id inválido (400 INVALID_USER_ID)
+GET {{base}}/goals/reduction?user_id=abc&competence=2026-07
+
+### Cenário: atualizar target_amount — único campo editável (200)
+# Substitua :id pelo id retornado na criação.
+PUT {{base}}/goals/reduction/00000000-0000-0000-0000-00000000e001
+Content-Type: application/json
+
+{
+  "target_amount": "350.00"
+}
+
+### Cenário: atualizar meta inexistente (404 GOAL_NOT_FOUND)
+PUT {{base}}/goals/reduction/99999999-9999-9999-9999-999999999999
+Content-Type: application/json
+
+{
+  "target_amount": "350.00"
+}
+
+### Cenário: comparativo mensal — MET-05/07 (200; variation/on_track/progress; campos null com upstream fora)
+GET {{base}}/goals/reduction/comparison?user_id={{user}}&competence=2026-07
+
+### Cenário: comparativo com competência inválida (400 INVALID_COMPETENCE)
+GET {{base}}/goals/reduction/comparison?user_id={{user}}&competence=2026-13
+
+### Cenário: fechamento do mês — MET-06 (200 {closed: n}; metas com upstream fora são puladas)
+POST {{base}}/goals/reduction/close-month
+Content-Type: application/json
+
+{
+  "competence": "2026-07"
+}
+
+### Cenário: fechamento sem competence (400 VALIDATION_ERROR)
+POST {{base}}/goals/reduction/close-month
+Content-Type: application/json
+
+{}
+
+### Cenário: excluir meta — soft delete (204)
+DELETE {{base}}/goals/reduction/00000000-0000-0000-0000-00000000e001
+
+### Cenário: excluir meta inexistente (404 GOAL_NOT_FOUND)
+DELETE {{base}}/goals/reduction/99999999-9999-9999-9999-999999999999

@@ -64,7 +64,7 @@ Encaixe na arquitetura: CRUD local `Handler > UseCase > Repository > PostgreSQL`
 **Fluxo principal: `GET /goals/reduction/comparison`**
 1. Handler valida `user_id` e `competence`
 2. UseCase busca todas as metas do `user_id` para a `competence`
-3. Para cada meta, dispara chamada paralela: `httpclient.GetExpensesByCategory(user_id, category_id, competence)` → `current_month_amount`. `category_name` permanece `null` — o endpoint consumido retorna apenas `category_id` e `total`; o frontend resolve o nome pelo id (decisão HF-69)
+3. Para cada meta, dispara chamada paralela: `httpclient.GetExpensesByCategory(user_id, category_id, competence)` → `current_month_amount` e `category_name`. O client consome `GET /expenses/totals/by-category` (CAL-05, única rota real) e filtra a categoria na resposta (HF-70); `category_name` fica `null` quando a categoria não tem despesas na competência
 4. Se uma categoria falha: `current_month_amount: null` naquele item, log WARN com `category_id`
 5. Para metas com `previous_amount == null`: tenta preencher via httpclient (competencia anterior); se obtiver, persiste o valor
 6. Calcula por categoria: `variation_pct`, `variation_label`, `on_track`, `target_progress_pct`
@@ -157,7 +157,7 @@ Request:
 
 ---
 
-**`DELETE /goals/reduction/:id?requester_id=`**
+**`DELETE /goals/reduction/:id`**
 - Rota: `DELETE /api/v1/goals/reduction/:id`
 - Status codes: `204` deletado, `404` nao encontrado, `500` erro interno
 
@@ -173,7 +173,7 @@ Response 200:
   "data": [
     {
       "category_id": "uuid",
-      "category_name": null,
+      "category_name": "Alimentacao",
       "previous_month_amount": "800.00",
       "current_month_amount": "620.00",
       "target_amount": "700.00",
