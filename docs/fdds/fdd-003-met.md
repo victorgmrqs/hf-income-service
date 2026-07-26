@@ -64,7 +64,7 @@ Encaixe na arquitetura: CRUD local `Handler > UseCase > Repository > PostgreSQL`
 **Fluxo principal: `GET /goals/reduction/comparison`**
 1. Handler valida `user_id` e `competence`
 2. UseCase busca todas as metas do `user_id` para a `competence`
-3. Para cada meta, dispara chamada paralela: `httpclient.GetExpensesByCategory(user_id, category_id, competence)` → `current_month_amount` e `category_name`
+3. Para cada meta, dispara chamada paralela: `httpclient.GetExpensesByCategory(user_id, category_id, competence)` → `current_month_amount`. `category_name` permanece `null` — o endpoint consumido retorna apenas `category_id` e `total`; o frontend resolve o nome pelo id (decisão HF-69)
 4. Se uma categoria falha: `current_month_amount: null` naquele item, log WARN com `category_id`
 5. Para metas com `previous_amount == null`: tenta preencher via httpclient (competencia anterior); se obtiver, persiste o valor
 6. Calcula por categoria: `variation_pct`, `variation_label`, `on_track`, `target_progress_pct`
@@ -173,7 +173,7 @@ Response 200:
   "data": [
     {
       "category_id": "uuid",
-      "category_name": "Alimentacao",
+      "category_name": null,
       "previous_month_amount": "800.00",
       "current_month_amount": "620.00",
       "target_amount": "700.00",
@@ -252,7 +252,7 @@ metrics.BusinessErrorsTotal.WithLabelValues("MET", "upstream").Inc()
 ```
 
 **Campos de log obrigatorios**
-- Entrada (INFO): `operation`, `user_id`, `competence`
+- Entrada (INFO): `operation`, `user_id`, `competence` (`close_month` e um job por competencia, sem `user_id` na entrada)
 - Saida (INFO): `operation`, `duration_ms`, `goal_id` (quando aplicavel), `categories_count` (no comparativo)
 - Degradacao na criacao (WARN): `trace_id`, `user_id`, `category_id`, `competence`, `reason`
 - Degradacao no comparativo (WARN): `trace_id`, `user_id`, `category_id`, `competence`
