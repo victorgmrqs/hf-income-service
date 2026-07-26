@@ -16,11 +16,13 @@ import (
 	"github.com/victorgmrqs/hf-income-service/src/internal/handler"
 	balancehandler "github.com/victorgmrqs/hf-income-service/src/internal/handler/balance"
 	globalbudgethandler "github.com/victorgmrqs/hf-income-service/src/internal/handler/global_budget"
+	goalhandler "github.com/victorgmrqs/hf-income-service/src/internal/handler/goal"
 	incomehandler "github.com/victorgmrqs/hf-income-service/src/internal/handler/income"
 	"github.com/victorgmrqs/hf-income-service/src/internal/repository"
 	"github.com/victorgmrqs/hf-income-service/src/internal/scheduler"
 	balanceUseCase "github.com/victorgmrqs/hf-income-service/src/internal/usecase/balance"
 	budgetUseCase "github.com/victorgmrqs/hf-income-service/src/internal/usecase/global_budget"
+	goalUseCase "github.com/victorgmrqs/hf-income-service/src/internal/usecase/goal"
 	incomeUseCase "github.com/victorgmrqs/hf-income-service/src/internal/usecase/income"
 	"github.com/victorgmrqs/hf-income-service/src/pkg/database"
 	"github.com/victorgmrqs/hf-income-service/src/pkg/httpclient"
@@ -50,12 +52,16 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to connect to database: %v", err)
 	}
-	if err := db.AutoMigrate(&entity.Income{}, &entity.GlobalBudget{}); err != nil {
+	if err := db.AutoMigrate(&entity.Income{}, &entity.GlobalBudget{}, &entity.ReductionGoal{}); err != nil {
 		log.Fatalf("failed to run migrations: %v", err)
 	}
 	// ORC-01 (HF-44): índice único parcial (user_id, competence) WHERE deleted_at IS NULL.
 	if err := repository.EnsureGlobalBudgetIndexes(db); err != nil {
 		log.Fatalf("failed to ensure global budget indexes: %v", err)
+	}
+	// MET-04 (HF-70): índices parciais de reduction_goals (unicidade por usuário/categoria/competência).
+	if err := repository.EnsureReductionGoalIndexes(db); err != nil {
+		log.Fatalf("failed to ensure reduction goal indexes: %v", err)
 	}
 	logger.Info("database connected and migrated")
 
@@ -101,6 +107,19 @@ func main() {
 		metrics,
 	)
 
+	// Wiring MET: repository + httpclient -> use cases -> handler.
+	// comparison/close_month consomem o hf-transaction-service via TransactionClient.
+	reductionGoalRepo := repository.NewReductionGoalRepository(db)
+	goalHandler := goalhandler.NewGoalHandler(
+		goalUseCase.NewCreateUseCase(reductionGoalRepo, txClient, logger),
+		goalUseCase.NewListUseCase(reductionGoalRepo, logger),
+		goalUseCase.NewUpdateUseCase(reductionGoalRepo, logger),
+		goalUseCase.NewDeleteUseCase(reductionGoalRepo, logger),
+		goalUseCase.NewComparisonUseCase(reductionGoalRepo, txClient, logger),
+		goalUseCase.NewCloseMonthUseCase(reductionGoalRepo, txClient, logger),
+		metrics,
+	)
+
 	// Métricas Prometheus num servidor separado (scrape pelo Alloy em :APP_METRICS_PORT/metrics).
 	go func() {
 		mux := http.NewServeMux()
@@ -112,7 +131,7 @@ func main() {
 		}
 	}()
 
-	router := handler.SetupRouter(logger, metrics, incomeHandler, globalBudgetHandler, balanceHandler)
+	router := handler.SetupRouter(logger, metrics, incomeHandler, globalBudgetHandler, balanceHandler, goalHandler)
 	logger.Info("server listening", slog.String("port", cfg.Server.Port))
 	if err := router.Run(":" + cfg.Server.Port); err != nil {
 		log.Fatalf("failed to start server: %v", err)

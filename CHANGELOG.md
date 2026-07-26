@@ -6,7 +6,11 @@ Cada entrada referencia o ticket Jira (`(HF-XX)`). Datas em `YYYY-MM-DD`.
 
 ## [Unreleased]
 
+### Fixed
+- `httpclient.GetExpensesByCategory` apontava para uma rota inexistente do hf-transaction-service (`GET /expenses/user/{id}/by-category`, contrato provisório do HF-57) — toda chamada upstream do MET falhava com 404, deixando `previous_amount` sempre `null`, comparativo permanentemente degradado e `close-month` sempre `{closed: 0}`. Agora consome a rota real `GET /expenses/totals/by-category` (CAL-05) filtrando a categoria na resposta; categoria sem despesas na competência retorna total zero (não é erro) e `category_name` passa a ser propagado ao comparativo (`ComparisonItemOutput.category_name`). INTEGRATIONS.md e FDD-003 sincronizados. Encontrado ao executar a evidência `.http` do HF-70 contra os serviços reais. (HF-70)
+
 ### Added
+- Handler e rotas HTTP do domínio MET (`/api/v1/goals/reduction`): `POST` (201), `GET ?user_id=&competence=` (200), `PUT /:id` (200), `DELETE /:id` (204), `GET /comparison` (200) e `POST /close-month` (200) — FDD-003 §5; `handleError` mapeia a matriz §6 completa (`MISSING_REQUIRED_FIELD`/`INVALID_TARGET_AMOUNT`/`INVALID_COMPETENCE` 400, `GOAL_ALREADY_EXISTS` 409, `GOAL_NOT_FOUND` 404, `VALIDATION_ERROR` 400, `INTERNAL_SERVER_ERROR` 500) com `BusinessErrorsTotal{MET,MET-04}`; wiring completo no `main.go` (AutoMigrate de `reduction_goals` + `EnsureReductionGoalIndexes`, reuso do `TransactionClient`); testes unitários do handler com use cases mockados + assert de rotas registradas; evidência executada em `docs/http/goal/HF-70-goals-reduction.http`. (HF-70)
 - Gates de qualidade no CI: job `quality` (gofmt + go vet + golangci-lint só código novo do PR) e job `docs-guard` (em pull_request); `build-and-push` passa a depender de `quality`. (HF-91)
 - `.golangci.yml` (errcheck, govet, ineffassign, staticcheck, unused) e `scripts/docs-guard.sh` (código em `internal/` sem CHANGELOG/teste no mesmo diff falha o PR). (HF-91)
 - Skills do workflow versionadas: `/task`, `/code-review-task`, `/docs-sync` em `.claude/skills/<nome>/SKILL.md` (Claude Code) e `.agents/skills/<nome>.md` (agy); `task.md` plano antigo removido. (HF-96)

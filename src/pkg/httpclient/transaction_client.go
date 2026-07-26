@@ -39,10 +39,12 @@ type PendingBillOutput struct {
 	ExpenseID   *string         `json:"expense_id"`
 }
 
-// ExpensesByCategoryOutput holds totals per category from GET /expenses/user/{id}/by-category.
+// ExpensesByCategoryOutput holds one category's total from GET /expenses/totals/by-category.
+// CategoryName is empty when the category has no expenses in the competence.
 type ExpensesByCategoryOutput struct {
-	CategoryID string          `json:"category_id"`
-	Total      decimal.Decimal `json:"total"`
+	CategoryID   string          `json:"category_id"`
+	CategoryName string          `json:"category_name"`
+	Total        decimal.Decimal `json:"total"`
 }
 
 // TransactionClient abstracts all calls to hf-transaction-service.
@@ -131,12 +133,20 @@ func (c *transactionClient) GetAccountsPayable(ctx context.Context, userID, dueD
 }
 
 func (c *transactionClient) GetExpensesByCategory(ctx context.Context, userID, categoryID, competence string) (*ExpensesByCategoryOutput, error) {
-	path := fmt.Sprintf("/api/v1/expenses/user/%s/by-category?category_id=%s&competence=%s", userID, categoryID, competence)
-	var env envelope[*ExpensesByCategoryOutput]
+	// CAL-05: rota real de totais por categoria do hf-transaction-service — não
+	// existe endpoint de categoria única; o filtro é feito aqui na resposta.
+	path := fmt.Sprintf("/api/v1/expenses/totals/by-category?user_id=%s&competence=%s", userID, competence)
+	var env envelope[[]ExpensesByCategoryOutput]
 	if err := c.get(ctx, path, &env); err != nil {
 		return nil, err
 	}
-	return env.Data, nil
+	for i := range env.Data {
+		if env.Data[i].CategoryID == categoryID {
+			return &env.Data[i], nil
+		}
+	}
+	// Categoria sem despesas na competência: total zero (não é erro).
+	return &ExpensesByCategoryOutput{CategoryID: categoryID, Total: decimal.Zero}, nil
 }
 
 // LastDayOfMonth returns the last calendar day of competence (format "YYYY-MM") as "YYYY-MM-DD".

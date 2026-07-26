@@ -8,6 +8,7 @@ import (
 
 	balancehandler "github.com/victorgmrqs/hf-income-service/src/internal/handler/balance"
 	globalbudgethandler "github.com/victorgmrqs/hf-income-service/src/internal/handler/global_budget"
+	goalhandler "github.com/victorgmrqs/hf-income-service/src/internal/handler/goal"
 	incomehandler "github.com/victorgmrqs/hf-income-service/src/internal/handler/income"
 	"github.com/victorgmrqs/hf-income-service/src/pkg/observability"
 )
@@ -21,6 +22,7 @@ func SetupRouter(
 	incomeHandler *incomehandler.IncomeHandler,
 	globalBudgetHandler *globalbudgethandler.GlobalBudgetHandler,
 	balanceHandler *balancehandler.BalanceHandler,
+	goalHandler *goalhandler.GoalHandler,
 ) *gin.Engine {
 	router := gin.New()
 	router.Use(gin.Recovery())
@@ -51,6 +53,18 @@ func SetupRouter(
 			budgets.GET("/preview-next", globalBudgetHandler.PreviewNext)
 			budgets.POST("/auto-adjust", globalBudgetHandler.AutoAdjust)
 			budgets.PUT("/:id", globalBudgetHandler.Update)
+		}
+
+		// Metas de redução (MET) — FDD-003 §5.
+		goals := api.Group("/goals/reduction")
+		{
+			goals.POST("", goalHandler.Create)
+			goals.GET("", goalHandler.List)
+			// Rotas literais do domínio (MET-05/06/07).
+			goals.GET("/comparison", goalHandler.Comparison)
+			goals.POST("/close-month", goalHandler.CloseMonth)
+			goals.PUT("/:id", goalHandler.Update)
+			goals.DELETE("/:id", goalHandler.Delete)
 		}
 
 		// Saldo mensal (SAL) — calculado sob demanda, sem persistência.
